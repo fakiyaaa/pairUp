@@ -29,21 +29,6 @@ export function getInitials(name: string) {
     .slice(0, 2);
 }
 
-export function timeAgo(date: string) {
-  const now = new Date();
-  const past = new Date(date);
-  const diffMs = now.getTime() - past.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return formatDate(date);
-}
-
 export const interviewTypeLabels: Record<string, string> = {
   technical: "Technical",
   behavioral: "Behavioral",
@@ -55,10 +40,4 @@ export const difficultyLabels: Record<string, string> = {
   beginner: "Beginner",
   intermediate: "Intermediate",
   advanced: "Advanced",
-};
-
-export const intentLabels: Record<string, string> = {
-  give: "Offering Interview",
-  get: "Seeking Interview",
-  both: "Either Role",
 };

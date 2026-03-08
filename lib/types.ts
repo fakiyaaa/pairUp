@@ -1,7 +1,6 @@
 export type InterviewType = "technical" | "behavioral" | "case" | "product";
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 export type SessionStatus = "pending" | "confirmed" | "completed" | "cancelled";
-export type PostIntent = "give" | "get" | "both";
 export type UserRole = "interviewer" | "interviewee" | "both";
 
 export interface User {
@@ -19,38 +18,6 @@ export interface User {
   rating: number;
   joinedAt: string;
   schedulingUrl?: string;
-}
-
-export interface Post {
-  id: string;
-  author: User;
-  intent: PostIntent;
-  interviewType: InterviewType;
-  topics: string[];
-  difficulty: Difficulty;
-  duration: number; // minutes
-  targetCompany?: string;
-  description?: string;
-  availabilitySlots: AvailabilitySlot[];
-  createdAt: string;
-  status: "open" | "matched" | "expired";
-}
-
-export interface AvailabilitySlot {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-}
-
-export interface MatchRequest {
-  id: string;
-  post: Post;
-  requester: User;
-  proposedSlots: AvailabilitySlot[];
-  message?: string;
-  status: "pending" | "accepted" | "declined";
-  createdAt: string;
 }
 
 export interface Session {

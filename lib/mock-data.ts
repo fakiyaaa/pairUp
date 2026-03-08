@@ -1,8 +1,6 @@
 import type {
   User,
-  Post,
   Session,
-  MatchRequest,
   Notification,
 } from "./types";
 
@@ -100,143 +98,6 @@ export const users: User[] = [
   },
 ];
 
-export const posts: Post[] = [
-  {
-    id: "p1",
-    author: users[1],
-    intent: "give",
-    interviewType: "product",
-    topics: ["Product Sense", "Metrics"],
-    difficulty: "intermediate",
-    duration: 45,
-    targetCompany: "Google",
-    description:
-      "I've done 20+ PM interviews and can simulate Google APM-style product sense questions. Happy to give detailed feedback on frameworks and communication.",
-    availabilitySlots: [
-      { id: "s1", date: "2026-02-23", startTime: "10:00", endTime: "11:00" },
-      { id: "s2", date: "2026-02-24", startTime: "14:00", endTime: "15:00" },
-      { id: "s3", date: "2026-02-25", startTime: "09:00", endTime: "10:00" },
-    ],
-    createdAt: "2026-02-20T08:30:00Z",
-    status: "open",
-  },
-  {
-    id: "p2",
-    author: users[2],
-    intent: "give",
-    interviewType: "case",
-    topics: ["Market Sizing", "Profitability"],
-    difficulty: "advanced",
-    duration: 60,
-    targetCompany: "McKinsey",
-    description:
-      "Ex-consulting background. I'll run a full MBB-style case with you including market sizing, profitability analysis, and synthesis. Expect real feedback.",
-    availabilitySlots: [
-      { id: "s4", date: "2026-02-22", startTime: "16:00", endTime: "17:00" },
-      { id: "s5", date: "2026-02-23", startTime: "11:00", endTime: "12:00" },
-    ],
-    createdAt: "2026-02-19T15:00:00Z",
-    status: "open",
-  },
-  {
-    id: "p3",
-    author: users[3],
-    intent: "both",
-    interviewType: "technical",
-    topics: ["Machine Learning", "System Design"],
-    difficulty: "intermediate",
-    duration: 60,
-    description:
-      "Looking to practice ML system design (recommendation systems, search ranking, etc). Happy to swap roles — I can also interview you on general system design.",
-    availabilitySlots: [
-      { id: "s6", date: "2026-02-23", startTime: "08:00", endTime: "09:00" },
-      { id: "s7", date: "2026-02-24", startTime: "08:00", endTime: "09:00" },
-      { id: "s8", date: "2026-02-26", startTime: "19:00", endTime: "20:00" },
-    ],
-    createdAt: "2026-02-20T12:00:00Z",
-    status: "open",
-  },
-  {
-    id: "p4",
-    author: users[4],
-    intent: "get",
-    interviewType: "technical",
-    topics: ["React", "System Design", "API Design"],
-    difficulty: "intermediate",
-    duration: 45,
-    targetCompany: "Stripe",
-    description:
-      "Preparing for Stripe frontend + full-stack interviews. Need someone to run me through system design and React architecture questions.",
-    availabilitySlots: [
-      { id: "s9", date: "2026-02-22", startTime: "18:00", endTime: "19:00" },
-      {
-        id: "s10",
-        date: "2026-02-24",
-        startTime: "10:00",
-        endTime: "11:00",
-      },
-    ],
-    createdAt: "2026-02-21T09:00:00Z",
-    status: "open",
-  },
-  {
-    id: "p5",
-    author: users[5],
-    intent: "both",
-    interviewType: "technical",
-    topics: ["Algorithms", "Dynamic Programming", "Data Structures"],
-    difficulty: "advanced",
-    duration: 60,
-    targetCompany: "Jane Street",
-    description:
-      "Quant-style technical interviews — algorithms with a math twist. Looking for someone strong in DP and combinatorics to trade rounds with.",
-    availabilitySlots: [
-      {
-        id: "s11",
-        date: "2026-02-23",
-        startTime: "15:00",
-        endTime: "16:00",
-      },
-      {
-        id: "s12",
-        date: "2026-02-25",
-        startTime: "13:00",
-        endTime: "14:00",
-      },
-    ],
-    createdAt: "2026-02-20T18:00:00Z",
-    status: "open",
-  },
-  {
-    id: "p6",
-    author: users[1],
-    intent: "get",
-    interviewType: "behavioral",
-    topics: ["Leadership", "Conflict Resolution", "Strategy"],
-    difficulty: "intermediate",
-    duration: 30,
-    targetCompany: "Meta",
-    description:
-      "Need practice with Meta's behavioral questions — especially around leadership and navigating ambiguity. Looking for someone who can give structured feedback.",
-    availabilitySlots: [
-      {
-        id: "s13",
-        date: "2026-02-24",
-        startTime: "16:00",
-        endTime: "16:30",
-      },
-      {
-        id: "s14",
-        date: "2026-02-26",
-        startTime: "11:00",
-        endTime: "11:30",
-      },
-    ],
-    createdAt: "2026-02-21T06:00:00Z",
-    status: "open",
-  },
-];
-
 export const sessions: Session[] = [
   {
     id: "ses1",
@@ -303,39 +164,7 @@ export const sessions: Session[] = [
   },
 ];
 
-export const matchRequests: MatchRequest[] = [
-  {
-    id: "mr1",
-    post: posts[0],
-    requester: currentUser,
-    proposedSlots: [posts[0].availabilitySlots[0]],
-    message:
-      "Hi Priya! I'm preparing for Google and would love to practice product sense with you. I've been working through product frameworks and could use feedback on my structured thinking.",
-    status: "pending",
-    createdAt: "2026-02-21T10:00:00Z",
-  },
-  {
-    id: "mr2",
-    post: posts[3],
-    requester: users[4],
-    proposedSlots: [posts[3].availabilitySlots[0]],
-    message:
-      "Hey Alex, saw you're strong in system design. Would you be open to running a Stripe-style frontend system design question? I can share some prep materials in advance.",
-    status: "pending",
-    createdAt: "2026-02-21T09:30:00Z",
-  },
-];
-
 export const notifications: Notification[] = [
-  {
-    id: "n1",
-    type: "match_request",
-    title: "New match request",
-    message: "Sofia Rodriguez wants to practice with you",
-    read: false,
-    createdAt: "2026-02-21T09:30:00Z",
-    actionUrl: "/requests",
-  },
   {
     id: "n2",
     type: "session_reminder",
