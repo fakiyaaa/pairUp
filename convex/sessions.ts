@@ -14,6 +14,7 @@
  * - scheduling mock interviews
  * - querying upcoming sessions
  * - matching users by topic
+ * *NOTE: Convex automatically generate id for every table and new added row. This is why we didn't add id field in the schemas
  */
 
 import { defineSchema, defineTable } from "convex/server";
@@ -24,23 +25,24 @@ export default defineSchema({
   /**
    * USERS
    *
-   * Stores authentication and profile information.
+   * Stores profile information.
+   * Authentication is handled by Convex built-in auth — no passwordHash needed.
    *
    * Important notes:
-   * - email must be unique (login lookup)
-   * - passwordHash is stored instead of plaintext password
    * - timezone is needed to properly render scheduled interviews
+   * - calComLink is required at signup for scheduling
    */
   users: defineTable({
     fullName: v.string(),
     email: v.string(),
-    passwordHash: v.string(),
     timezone: v.string(),
+    experience: v.string(),
+    bio: v.string(),
+    calComLink: v.string(),
 
     createdAt: v.number(), // unix timestamp
-  })
-    // login queries must be fast
-    .index("by_email", ["email"]),
+  }),
+
 
 
   /**
@@ -51,15 +53,13 @@ export default defineSchema({
    * Users can be:
    * - interviewer
    * - interviewee
-   * - both
    *
    * Stored as a table rather than an enum so the system
    * can expand in the future without changing the schema.
    */
   roles: defineTable({
     name: v.string(),
-  })
-    .index("by_name", ["name"]),
+  }),
 
 
   /**
@@ -77,40 +77,6 @@ export default defineSchema({
     .index("by_user", ["userId"]),
 
 
-
-
-  /**
-   * TOPICS
-   *
-   * Topics represent areas users want to practice interviews in.
-   *
-   * Examples:
-   * - system design
-   * - data structures & algorithms
-   * - product management
-   */
-  topics: defineTable({
-    name: v.string(),
-  })
-    .index("by_name", ["name"]),
-
-
-  /**
-   * USER TOPICS
-   *
-   * Many-to-many relationship between users and topics.
-   *
-   * Allows users to select multiple practice areas.
-   */
-  userTopics: defineTable({
-    userId: v.id("users"),
-    topicId: v.id("topics"),
-  })
-    .index("by_user", ["userId"])
-    .index("by_topic", ["topicId"]),
-
-
-
   /**
    * INTERVIEW TYPES
    *
@@ -119,15 +85,40 @@ export default defineSchema({
    * Typical industry categories:
    * - technical
    * - behavioral
-   * - system design
-   * - product sense
-   * - case study
    */
   interviewTypes: defineTable({
     name: v.string(),
-  })
-    .index("by_name", ["name"]),
+  }),
 
+  /**
+   * USER INTERVIEW TYPES
+   *
+   * Join table linking users to interview types.
+   *
+   * Many-to-many relationship:
+   * A user may practice multiple interview types.
+   */
+  userInterviewTypes: defineTable({
+    userId: v.id("users"),
+    interviewTypeId: v.id("interviewTypes"),
+  })
+    .index("by_user", ["userId"]),
+
+  /**
+   * TOPICS
+   *
+   * Topics represent areas users want to practice interviews in,
+   * grouped under an interview type.
+   *
+   * Examples:
+   * - system design (technical)
+   * - data structures & algorithms (technical)
+   * - behavioral questions (behavioral)
+   */
+  topics: defineTable({
+    name: v.string(),
+    interviewTypeId: v.id("interviewTypes"),
+  }),
 
 
   /**
@@ -140,14 +131,13 @@ export default defineSchema({
    * Relationships:
    * - interviewerId → users
    * - intervieweeId → users
-   * - topicId → topics
-   * - interviewTypeId → interviewTypes
+   * - topicId → topics (interview type is derivable via topic.interviewTypeId)
    *
    * status is stored as string because states may evolve:
    * - pending
    * - scheduled
    * - completed
-   * - cancelled
+   * - cancelled -> rescheduled and cancelled sessions are considered cancelled.
    *
    * scheduledAt uses a UNIX timestamp to avoid timezone bugs.
    */
@@ -157,7 +147,6 @@ export default defineSchema({
     intervieweeId: v.id("users"),
 
     topicId: v.id("topics"),
-    interviewTypeId: v.id("interviewTypes"),
 
     status: v.string(),
 
