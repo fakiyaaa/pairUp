@@ -6,11 +6,13 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuthActions } from "@convex-dev/auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { signIn } = useAuthActions();
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
@@ -33,7 +35,17 @@ export default function LoginPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            router.push("/dashboard");
+            const formData = new FormData(e.currentTarget);
+            formData.append("email", email);
+            formData.append("password", password);
+            formData.append("flow", "signIn");
+            signIn("password", formData)
+              .then(() => {
+                router.push("/dashboard");
+              })
+              .catch((error) => {
+                console.error("Error signing in:", error);
+              });
           }}
           className="flex flex-col gap-4"
         >
@@ -70,7 +82,10 @@ export default function LoginPage() {
 
         <p className="text-[13px] text-muted-foreground text-center mt-6">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-foreground hover:underline font-medium">
+          <Link
+            href="/signup"
+            className="text-foreground hover:underline font-medium"
+          >
             Sign up
           </Link>
         </p>
