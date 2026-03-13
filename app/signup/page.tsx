@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Calendar, Link2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuthActions } from "@convex-dev/auth/react";
 
 const timezones = [
   { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
@@ -74,6 +75,7 @@ const roles: { id: UserRole; label: string; description: string }[] = [
 export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const { signIn } = useAuthActions();
 
   // Step 1
   const [name, setName] = useState("");
@@ -101,6 +103,29 @@ export default function SignupPage() {
     setSelectedTopics((prev) =>
       prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic],
     );
+
+  const handleSubmit = (e: React.SubmitEvent) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("email", email);
+    formData.append("password", password);
+    formData.append("timezone", timezone);
+    formData.append("role", role);
+    formData.append("selectedTypes", JSON.stringify(selectedTypes));
+    formData.append("selectedTopics", JSON.stringify(selectedTopics));
+    formData.append("experience", experience);
+    formData.append("schedulingUrl", schedulingUrl);
+    formData.append("flow", "signUp");
+
+    console.log(formData);
+
+    signIn("password", formData)
+      .then(() => router.push("/dashboard"))
+      .catch((error: Error) => {
+        console.error("Signup error:", error);
+      });
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
@@ -356,12 +381,7 @@ export default function SignupPage() {
 
         {/* Step 4 — Scheduling link */}
         {step === 4 && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              router.push("/dashboard");
-            }}
-          >
+          <form onSubmit={handleSubmit}>
             <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-6">
               <Calendar className="w-5 h-5 text-muted-foreground" />
             </div>
