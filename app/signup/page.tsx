@@ -112,13 +112,16 @@ export default function SignupPage() {
     formData.append("password", password);
     formData.append("timezone", timezone);
     formData.append("role", role);
-    formData.append("selectedTypes", JSON.stringify(selectedTypes));
-    formData.append("selectedTopics", JSON.stringify(selectedTopics));
+    formData.append("interviewTypes", JSON.stringify(selectedTypes));
+    formData.append("topics", JSON.stringify(selectedTopics));
     formData.append("experience", experience);
     formData.append("schedulingUrl", schedulingUrl);
     formData.append("flow", "signUp");
 
-    console.log(formData);
+    // uncomment to debug form data being sent to auth provider
+    // for (const [key, value] of formData.entries()) {
+    //   console.log(`${key}:`, value);
+    // }
 
     signIn("password", formData)
       .then(() => router.push("/dashboard"))
