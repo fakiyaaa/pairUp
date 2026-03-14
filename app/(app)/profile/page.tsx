@@ -14,12 +14,9 @@ import {
   interviewTypeLabels,
 } from "@/lib/utils";
 import type { Difficulty } from "@/lib/types";
-import {
-  ExternalLink,
-  Link2,
-  Star,
-} from "lucide-react";
+import { ExternalLink, Link2, Star } from "lucide-react";
 import Link from "next/link";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
 
 const timezones = [
@@ -40,9 +37,20 @@ const interviewTypes = [
 ];
 
 const allTopics = [
-  "Data Structures", "Algorithms", "System Design", "Dynamic Programming",
-  "Machine Learning", "Product Sense", "Metrics", "Strategy",
-  "Market Sizing", "Leadership", "React", "Node.js", "API Design", "Python",
+  "Data Structures",
+  "Algorithms",
+  "System Design",
+  "Dynamic Programming",
+  "Machine Learning",
+  "Product Sense",
+  "Metrics",
+  "Strategy",
+  "Market Sizing",
+  "Leadership",
+  "React",
+  "Node.js",
+  "API Design",
+  "Python",
 ];
 
 export default function ProfilePage() {
@@ -51,27 +59,28 @@ export default function ProfilePage() {
   const [bio, setBio] = useState(currentUser.bio || "");
   const [timezone, setTimezone] = useState(currentUser.timezone);
   const [selectedTypes, setSelectedTypes] = useState(
-    currentUser.interviewTypes as string[]
+    currentUser.interviewTypes as string[],
   );
   const [selectedTopics, setSelectedTopics] = useState(currentUser.topics);
   const [experience, setExperience] = useState<Difficulty>(
-    currentUser.experienceLevel
+    currentUser.experienceLevel,
   );
   const [schedulingUrl, setSchedulingUrl] = useState(
-    currentUser.schedulingUrl || ""
+    currentUser.schedulingUrl || "",
   );
+  const { signOut } = useAuthActions();
 
   const completed = sessions.filter((s) => s.status === "completed");
 
   const toggleType = (id: string) => {
     setSelectedTypes((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
     );
   };
 
   const toggleTopic = (topic: string) => {
     setSelectedTopics((prev) =>
-      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
+      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic],
     );
   };
 
@@ -140,16 +149,12 @@ export default function ProfilePage() {
                 {bio}
               </p>
               <div className="flex items-center gap-4 mt-3 text-[13px] text-muted-foreground">
-                <span>
-                  {currentUser.completedSessions} sessions
-                </span>
+                <span>{currentUser.completedSessions} sessions</span>
                 <span className="flex items-center gap-1">
                   <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                   {currentUser.rating}
                 </span>
-                <span>
-                  Joined {formatDate(currentUser.joinedAt)}
-                </span>
+                <span>Joined {formatDate(currentUser.joinedAt)}</span>
               </div>
             </>
           )}
@@ -177,7 +182,7 @@ export default function ProfilePage() {
                       "px-3 py-1.5 text-[13px] font-medium rounded-lg border transition-all cursor-pointer",
                       selectedTypes.includes(type.id)
                         ? "border-foreground bg-foreground text-background"
-                        : "border-border text-muted-foreground hover:border-foreground/30"
+                        : "border-border text-muted-foreground hover:border-foreground/30",
                     )}
                   >
                     {type.label}
@@ -211,7 +216,7 @@ export default function ProfilePage() {
                       "px-3 py-1.5 text-[13px] font-medium rounded-lg border transition-all cursor-pointer",
                       selectedTopics.includes(topic)
                         ? "border-foreground bg-foreground text-background"
-                        : "border-border text-muted-foreground hover:border-foreground/30"
+                        : "border-border text-muted-foreground hover:border-foreground/30",
                     )}
                   >
                     {topic}
@@ -345,6 +350,9 @@ export default function ProfilePage() {
         <Link
           href="/"
           className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+          onClick={(e) => {
+            signOut();
+          }}
         >
           Sign out
         </Link>
