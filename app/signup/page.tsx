@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Calendar, Link2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuthActions } from "@convex-dev/auth/react";
 
 const timezones = [
   { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
@@ -74,6 +75,7 @@ const roles: { id: UserRole; label: string; description: string }[] = [
 export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const { signIn } = useAuthActions();
 
   // Step 1
   const [name, setName] = useState("");
@@ -94,13 +96,39 @@ export default function SignupPage() {
 
   const toggleType = (id: string) =>
     setSelectedTypes((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
     );
 
   const toggleTopic = (topic: string) =>
     setSelectedTopics((prev) =>
-      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
+      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic],
     );
+
+  const handleSubmit = (e: React.SubmitEvent) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("email", email);
+    formData.append("password", password);
+    formData.append("timezone", timezone);
+    formData.append("role", role);
+    formData.append("interviewTypes", JSON.stringify(selectedTypes));
+    formData.append("topics", JSON.stringify(selectedTopics));
+    formData.append("experience", experience);
+    formData.append("schedulingUrl", schedulingUrl);
+    formData.append("flow", "signUp");
+
+    // uncomment to debug form data being sent to auth provider
+    // for (const [key, value] of formData.entries()) {
+    //   console.log(`${key}:`, value);
+    // }
+
+    signIn("password", formData)
+      .then(() => router.push("/dashboard"))
+      .catch((error: Error) => {
+        console.error("Signup error:", error);
+      });
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
@@ -127,7 +155,12 @@ export default function SignupPage() {
 
         {/* Step 1 — Account */}
         {step === 1 && (
-          <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setStep(2);
+            }}
+          >
             <h1 className="text-[28px] font-bold tracking-tight mb-2">
               Create your account
             </h1>
@@ -167,7 +200,7 @@ export default function SignupPage() {
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
               />
-              <Button size="lg" className="w-full mt-2" onClick={() => setStep(2)}>
+              <Button type="submit" size="lg" className="w-full mt-2">
                 Continue
                 <ArrowRight className="w-4 h-4" />
               </Button>
@@ -181,12 +214,17 @@ export default function SignupPage() {
                 Sign in
               </Link>
             </p>
-          </>
+          </form>
         )}
 
         {/* Step 2 — Role */}
         {step === 2 && (
-          <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (role) setStep(3);
+            }}
+          >
             <h1 className="text-[28px] font-bold tracking-tight mb-2">
               What's your role?
             </h1>
@@ -196,19 +234,20 @@ export default function SignupPage() {
             <div className="flex flex-col gap-3 mb-8">
               {roles.map((r) => (
                 <button
+                  type="button"
                   key={r.id}
                   onClick={() => setRole(r.id)}
                   className={cn(
                     "text-left px-4 py-4 rounded-xl border transition-all cursor-pointer",
                     role === r.id
                       ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-card hover:border-foreground/30"
+                      : "border-border bg-card hover:border-foreground/30",
                   )}
                 >
                   <p
                     className={cn(
                       "text-[14px] font-semibold mb-0.5",
-                      role === r.id ? "text-background" : "text-foreground"
+                      role === r.id ? "text-background" : "text-foreground",
                     )}
                   >
                     {r.label}
@@ -218,7 +257,7 @@ export default function SignupPage() {
                       "text-[13px]",
                       role === r.id
                         ? "text-background/70"
-                        : "text-muted-foreground"
+                        : "text-muted-foreground",
                     )}
                   >
                     {r.description}
@@ -227,24 +266,31 @@ export default function SignupPage() {
               ))}
             </div>
             <div className="flex gap-3">
-              <Button variant="secondary" size="lg" className="flex-1" onClick={() => setStep(1)}>
-                Back
-              </Button>
               <Button
+                type="button"
+                variant="secondary"
                 size="lg"
                 className="flex-1"
-                onClick={() => role && setStep(3)}
+                onClick={() => setStep(1)}
               >
+                Back
+              </Button>
+              <Button type="submit" size="lg" className="flex-1">
                 Continue
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
-          </>
+          </form>
         )}
 
         {/* Step 3 — Preferences */}
         {step === 3 && (
-          <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setStep(4);
+            }}
+          >
             <h1 className="text-[28px] font-bold tracking-tight mb-2">
               Your preferences
             </h1>
@@ -259,13 +305,14 @@ export default function SignupPage() {
                 <div className="grid grid-cols-2 gap-2">
                   {interviewTypes.map((type) => (
                     <button
+                      type="button"
                       key={type.id}
                       onClick={() => toggleType(type.id)}
                       className={cn(
                         "px-4 py-3 text-[14px] font-medium rounded-xl border transition-all cursor-pointer",
                         selectedTypes.includes(type.id)
                           ? "border-foreground bg-foreground text-background"
-                          : "border-border bg-card text-foreground hover:border-foreground/30"
+                          : "border-border bg-card text-foreground hover:border-foreground/30",
                       )}
                     >
                       {type.label}
@@ -280,8 +327,14 @@ export default function SignupPage() {
                 placeholder="Select your level"
                 options={[
                   { value: "beginner", label: "Beginner — just starting prep" },
-                  { value: "intermediate", label: "Intermediate — some practice" },
-                  { value: "advanced", label: "Advanced — extensive experience" },
+                  {
+                    value: "intermediate",
+                    label: "Intermediate — some practice",
+                  },
+                  {
+                    value: "advanced",
+                    label: "Advanced — extensive experience",
+                  },
                 ]}
                 value={experience}
                 onChange={(e) => setExperience(e.target.value)}
@@ -294,13 +347,14 @@ export default function SignupPage() {
                 <div className="flex flex-wrap gap-2">
                   {topicOptions.map((topic) => (
                     <button
+                      type="button"
                       key={topic}
                       onClick={() => toggleTopic(topic)}
                       className={cn(
                         "px-3 py-1.5 text-[13px] font-medium rounded-lg border transition-all cursor-pointer",
                         selectedTopics.includes(topic)
                           ? "border-foreground bg-foreground text-background"
-                          : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                          : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30",
                       )}
                     >
                       {topic}
@@ -310,21 +364,27 @@ export default function SignupPage() {
               </div>
 
               <div className="flex gap-3 mt-2">
-                <Button variant="secondary" size="lg" className="flex-1" onClick={() => setStep(2)}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => setStep(2)}
+                >
                   Back
                 </Button>
-                <Button size="lg" className="flex-1" onClick={() => setStep(4)}>
+                <Button type="submit" size="lg" className="flex-1">
                   Continue
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
-          </>
+          </form>
         )}
 
         {/* Step 4 — Scheduling link */}
         {step === 4 && (
-          <>
+          <form onSubmit={handleSubmit}>
             <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-6">
               <Calendar className="w-5 h-5 text-muted-foreground" />
             </div>
@@ -352,11 +412,7 @@ export default function SignupPage() {
                 Works with Calendly, cal.com, or any direct booking link.
               </p>
 
-              <Button
-                size="lg"
-                className="w-full mt-2"
-                onClick={() => router.push("/dashboard")}
-              >
+              <Button type="submit" size="lg" className="w-full mt-2">
                 Complete setup
               </Button>
 
@@ -369,13 +425,14 @@ export default function SignupPage() {
             </div>
 
             <button
+              type="button"
               onClick={() => setStep(3)}
               className="mt-6 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
             </button>
-          </>
+          </form>
         )}
       </div>
     </div>
