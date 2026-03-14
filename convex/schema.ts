@@ -5,7 +5,8 @@ import { v } from "convex/values";
 export default defineSchema({
   ...authTables,
   users: defineTable({
-    name: v.optional(v.string()),
+    // name: v.optional(v.string()),
+    name: v.string(),
     email: v.string(),
     role: v.optional(
       v.union(
