@@ -81,7 +81,7 @@ export default function SessionDetailPage({
           <p className="text-[14px] text-muted-foreground">
             {formatDate(session.scheduledAt)} at{" "}
             {formatTime(
-              `${scheduled.getHours()}:${String(scheduled.getMinutes()).padStart(2, "0")}`
+              `${scheduled.getHours()}:${String(scheduled.getMinutes()).padStart(2, "0")}`,
             )}{" "}
             &middot; {session.duration} min &middot;{" "}
             {difficultyLabels[session.difficulty]}
@@ -91,23 +91,46 @@ export default function SessionDetailPage({
 
       {/* Join banner */}
       {session.status === "confirmed" && (
-        <a
-          href={session.meetingLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-between p-4 mb-8 bg-muted rounded-xl hover:bg-border/60 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <Video className="w-5 h-5 text-foreground" />
-            <div>
-              <p className="text-[14px] font-medium">Meeting link</p>
-              <p className="text-[12px] text-muted-foreground">
-                {session.meetingLink}
-              </p>
+        <div className="flex gap-3 mb-8">
+          <a
+            href={session.meetingLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 flex items-center justify-between p-4 bg-muted rounded-xl hover:bg-border/60 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Video className="w-5 h-5 text-foreground" />
+              <div>
+                <p className="text-[14px] font-medium">Join meeting</p>
+                <p className="text-[12px] text-muted-foreground">
+                  {session.meetingLink}
+                </p>
+              </div>
             </div>
-          </div>
-          <ExternalLink className="w-4 h-4 text-muted-foreground" />
-        </a>
+            <ExternalLink className="w-4 h-4 text-muted-foreground" />
+          </a>
+
+          {Date.now() <
+          new Date(session.scheduledAt).getTime() - 1000 * 60 * 60 ? (
+            <a
+              href={partner.schedulingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 bg-muted rounded-xl hover:bg-border/60 transition-colors text-[14px] font-medium"
+            >
+              <Calendar className="w-4 h-4" />
+              Reschedule
+            </a>
+          ) : (
+            <div
+              title="Cannot reschedule within 1 hour of session"
+              className="flex items-center gap-2 px-4 bg-muted rounded-xl text-[14px] font-medium text-muted-foreground/40 cursor-not-allowed"
+            >
+              <Calendar className="w-4 h-4" />
+              Reschedule
+            </div>
+          )}
+        </div>
       )}
 
       {/* Details */}
@@ -117,7 +140,9 @@ export default function SessionDetailPage({
         </h2>
         <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-[14px]">
           <div>
-            <p className="text-muted-foreground text-[12px] mb-0.5">Your role</p>
+            <p className="text-muted-foreground text-[12px] mb-0.5">
+              Your role
+            </p>
             <p className="font-medium">
               {isInterviewer ? "Interviewer" : "Interviewee"}
             </p>
@@ -191,7 +216,10 @@ export default function SessionDetailPage({
                   value: session.feedback.technicalSkill,
                 },
               ].map((item) => (
-                <div key={item.label} className="text-center p-3 bg-muted rounded-xl">
+                <div
+                  key={item.label}
+                  className="text-center p-3 bg-muted rounded-xl"
+                >
                   <p className="text-[18px] font-bold">{item.value}</p>
                   <p className="text-[11px] text-muted-foreground">
                     {item.label}
@@ -316,9 +344,7 @@ export default function SessionDetailPage({
                   >
                     Cancel
                   </Button>
-                  <Button onClick={() => setSubmitted(true)}>
-                    Submit
-                  </Button>
+                  <Button onClick={() => setSubmitted(true)}>Submit</Button>
                 </div>
               </div>
             </div>

@@ -3,19 +3,8 @@
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { currentUser, sessions } from "@/lib/mock-data";
-import {
-  cn,
-  formatDate,
-  formatTime,
-  interviewTypeLabels,
-} from "@/lib/utils";
-import {
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Star,
-  Video,
-} from "lucide-react";
+import { cn, formatDate, formatTime, interviewTypeLabels } from "@/lib/utils";
+import { Calendar, CheckCircle2, Clock, Star, Video } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -28,9 +17,16 @@ export default function SessionsPage() {
   const completed = sessions.filter((s) => s.status === "completed");
   const list = active === "Upcoming" ? upcoming : completed;
 
+  const canReschedule = (scheduledAt: string) => {
+    const oneHour = 1000 * 60 * 60;
+    return new Date(scheduledAt).getTime() - Date.now() > oneHour;
+  };
+
   return (
     <div>
-      <h1 className="text-[28px] font-semibold tracking-tight mb-6">Sessions</h1>
+      <h1 className="text-[28px] font-semibold tracking-tight mb-6">
+        Sessions
+      </h1>
 
       <div className="flex gap-1 mb-8">
         {tabs.map((t) => (
@@ -41,7 +37,7 @@ export default function SessionsPage() {
               "px-3 py-1 text-[13px] font-medium rounded-lg transition-colors cursor-pointer",
               active === t
                 ? "bg-foreground text-background"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {t}
@@ -86,16 +82,38 @@ export default function SessionsPage() {
                     {interviewTypeLabels[session.interviewType]} &middot;{" "}
                     {formatDate(session.scheduledAt)} at{" "}
                     {formatTime(
-                      `${scheduled.getHours()}:${String(scheduled.getMinutes()).padStart(2, "0")}`
+                      `${scheduled.getHours()}:${String(scheduled.getMinutes()).padStart(2, "0")}`,
                     )}{" "}
                     &middot; {session.duration}m
                   </p>
                 </div>
                 {session.status === "confirmed" && (
-                  <span className="text-[12px] font-medium text-foreground bg-accent px-2 py-1 rounded-md flex items-center gap-1">
-                    <Video className="w-3.5 h-3.5" />
-                    Join
-                  </span>
+                  <div
+                    className="flex items-center gap-2"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <span className="text-[12px] font-medium text-foreground bg-accent px-2 py-1 rounded-md flex items-center gap-1">
+                      <Video className="w-3.5 h-3.5" />
+                      Join
+                    </span>
+                    {canReschedule(session.scheduledAt) ? (
+                      <a
+                        href={partner.schedulingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[12px] font-medium text-muted-foreground border border-border px-2 py-1 rounded-md hover:text-foreground transition-colors"
+                      >
+                        Reschedule
+                      </a>
+                    ) : (
+                      <span
+                        title="Cannot reschedule within 1 hour of session"
+                        className="text-[12px] font-medium text-muted-foreground/40 border border-border px-2 py-1 rounded-md cursor-not-allowed"
+                      >
+                        Reschedule
+                      </span>
+                    )}
+                  </div>
                 )}
                 {session.status === "completed" && session.feedback && (
                   <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
