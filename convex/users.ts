@@ -9,9 +9,14 @@ export const list = query({
 
 export const create = mutation({
   args: {
-    name: v.string(),
+    fullName: v.string(),
     email: v.string(),
-    role: v.string(),
+    passwordHash: v.string(),
+    timezone: v.string(),
+    experience: v.string(),
+    bio: v.string(),
+    calComLink: v.string(),
+    createdAt: v.number(),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("users", args);
