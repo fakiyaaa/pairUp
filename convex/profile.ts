@@ -5,47 +5,122 @@
  *
  * Provides:
  *   - getProfile      → full profile for any user (own or public)
+ *   - updateProfile   → patch editable profile fields
  *   - listProfiles    → all public profiles for the browse page
  *
  * Auth note:
  *   Queries accept a `userId` argument so they work independently of the
- *   auth pipeline. Once auth is wired up, a thin authenticated wrapper can
- *   be added here using ctx.auth.getUserIdentity() — no changes to these
- *   queries needed.
+ *   auth pipeline. Once auth is wired up, replace the `userId` arg with
+ *   ctx.auth.getUserIdentity() — no changes to the internal helpers needed.
  */
 
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import { Id, Doc } from "./_generated/dataModel";
+
+// ---------------------------------------------------------------------------
+// Return-type shapes
+// (Explicit types make callers predictable and diffs reviewable.)
+// ---------------------------------------------------------------------------
+
+type PreferenceSummary = {
+  interviewType: string;
+  role: "interviewee" | "interviewer" | "both";
+};
+
+type UpcomingSession = {
+  sessionId: Id<"sessions">;
+  status: string;
+  scheduledAt: number;
+  role: "interviewer" | "interviewee";
+  partnerName: string | null;
+  topic: string | null;
+  interviewType: string | null;
+};
+
+type PublicProfile = {
+  userId: Id<"users">;
+  fullName: string;
+  timezone: string;
+  experience: string;
+  bio: string | null;
+  calComLink: string | null;
+  preferences: PreferenceSummary[];
+};
+
+type FullProfile = PublicProfile & {
+  email: string;
+  upcomingSessions: UpcomingSession[];
+};
 
 // ---------------------------------------------------------------------------
 // Internal helpers
+// Each helper has one job and returns a typed value.
 // ---------------------------------------------------------------------------
 
 /**
- * Fetches upcoming sessions for a user (as interviewer or interviewee).
- * "Upcoming" = not cancelled, not completed, scheduledAt >= now.
+ * Resolves a user's preferences into { interviewType, role } summaries.
+ * One DB call for the preference rows + one per unique interviewType.
  */
-async function getUpcomingSessions(ctx: { db: any }, userId: Id<"users">) {
+async function resolvePreferences(
+  ctx: { db: any },
+  userId: Id<"users">
+): Promise<PreferenceSummary[]> {
+  const prefRows = await ctx.db
+    .query("userPreferences")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .collect();
+
+  if (prefRows.length === 0) return [];
+
+  // Deduplicate interviewType lookups
+  const uniqueTypeIds = [...new Set(prefRows.map((r: any) => r.interviewTypeId))];
+  const typeMap = new Map(
+    await Promise.all(
+      uniqueTypeIds.map(async (id: any) => {
+        const doc = await ctx.db.get(id);
+        return [id, doc?.name ?? null] as const;
+      })
+    )
+  );
+
+  return prefRows.map((r: any) => ({
+    interviewType: typeMap.get(r.interviewTypeId) ?? null,
+    role: r.role,
+  }));
+}
+
+/**
+ * Resolves upcoming sessions for a user as both interviewer and interviewee.
+ * "Upcoming" = scheduled in the future, status is pending or confirmed.
+ */
+async function resolveUpcomingSessions(
+  ctx: { db: any },
+  userId: Id<"users">
+): Promise<UpcomingSession[]> {
   const now = Date.now();
 
   const [asInterviewer, asInterviewee] = await Promise.all([
     ctx.db
       .query("sessions")
-      .withIndex("by_interviewer", (q: any) => q.eq("interviewerId", userId))
+      .withIndex("by_interviewer_and_status", (q: any) =>
+        q.eq("interviewerId", userId)
+      )
       .collect(),
     ctx.db
       .query("sessions")
-      .withIndex("by_interviewee", (q: any) => q.eq("intervieweeId", userId))
+      .withIndex("by_interviewee_and_status", (q: any) =>
+        q.eq("intervieweeId", userId)
+      )
       .collect(),
   ]);
 
-  const upcoming: any[] = [...asInterviewer, ...asInterviewee]
+  const upcoming = [...asInterviewer, ...asInterviewee]
     .filter(
       (s) =>
+        s.scheduledAt >= now &&
         s.status !== "cancelled" &&
-        s.status !== "completed" &&
-        s.scheduledAt >= now
+        s.status !== "completed"
     )
     .sort((a, b) => a.scheduledAt - b.scheduledAt);
 
@@ -66,69 +141,31 @@ async function getUpcomingSessions(ctx: { db: any }, userId: Id<"users">) {
         sessionId: s._id,
         status: s.status,
         scheduledAt: s.scheduledAt,
-        isInterviewer,
+        role: isInterviewer ? "interviewer" : "interviewee",
         partnerName: partner?.fullName ?? null,
         topic: topic?.name ?? null,
         interviewType: interviewType?.name ?? null,
-      };
+      } satisfies UpcomingSession;
     })
   );
 }
 
 /**
- * Fetches onboarding selections for a user:
- * roles (from userRoles), topics (from userTopics),
- * and interview types (from userInterviewTypes).
- *
- * Topics include their parent interviewType name because
- * topics.interviewTypeId links each topic to a category.
+ * Shapes a raw user doc into the public-facing profile fields.
+ * Accepts pre-resolved preferences so callers control when that fetch happens.
  */
-async function getOnboardingInfo(ctx: { db: any }, userId: Id<"users">) {
-  const [roleRows, topicRows, interviewTypeRows] = await Promise.all([
-    ctx.db
-      .query("userRoles")
-      .withIndex("by_user", (q: any) => q.eq("userId", userId))
-      .collect(),
-    ctx.db
-      .query("userTopics")
-      .withIndex("by_user", (q: any) => q.eq("userId", userId))
-      .collect(),
-    ctx.db
-      .query("userInterviewTypes")
-      .withIndex("by_user", (q: any) => q.eq("userId", userId))
-      .collect(),
-  ]);
-
-  const [roles, topics, interviewTypes] = await Promise.all([
-    Promise.all(
-      roleRows.map(async (r: any) => {
-        const role = await ctx.db.get(r.roleId);
-        return role?.name ?? null;
-      })
-    ),
-    Promise.all(
-      topicRows.map(async (r: any) => {
-        const topic = await ctx.db.get(r.topicId);
-        if (!topic) return null;
-        const interviewType = await ctx.db.get(topic.interviewTypeId);
-        return {
-          name: topic.name,
-          interviewType: interviewType?.name ?? null,
-        };
-      })
-    ),
-    Promise.all(
-      interviewTypeRows.map(async (r: any) => {
-        const it = await ctx.db.get(r.interviewTypeId);
-        return it?.name ?? null;
-      })
-    ),
-  ]);
-
+function formatPublicProfile(
+  user: Doc<"users">,
+  preferences: PreferenceSummary[]
+): PublicProfile {
   return {
-    roles: roles.filter(Boolean) as string[],
-    topics: topics.filter(Boolean) as { name: string; interviewType: string | null }[],
-    interviewTypes: interviewTypes.filter(Boolean) as string[],
+    userId: user._id,
+    fullName: user.fullName,
+    timezone: user.timezone,
+    experience: user.experience,
+    bio: user.bio ?? null,
+    calComLink: user.calComLink ?? null,
+    preferences,
   };
 }
 
@@ -139,8 +176,8 @@ async function getOnboardingInfo(ctx: { db: any }, userId: Id<"users">) {
 /**
  * getProfile
  *
- * Full profile for a given user — used for both the authenticated
- * "my profile" page and public profile views linked from browse.
+ * Full profile for a given user — used for both "my profile" and public views.
+ * Includes email and upcoming sessions (not exposed on listProfiles).
  *
  * Returns null if the user does not exist.
  */
@@ -148,25 +185,18 @@ export const getProfile = query({
   args: {
     userId: v.id("users"),
   },
-  handler: async (ctx, { userId }) => {
+  handler: async (ctx, { userId }): Promise<FullProfile | null> => {
     const user = await ctx.db.get(userId);
     if (!user) return null;
 
-    const [onboarding, upcomingSessions] = await Promise.all([
-      getOnboardingInfo(ctx, userId),
-      getUpcomingSessions(ctx, userId),
+    const [preferences, upcomingSessions] = await Promise.all([
+      resolvePreferences(ctx, userId),
+      resolveUpcomingSessions(ctx, userId),
     ]);
 
     return {
-      userId: user._id,
-      fullName: user.fullName,
+      ...formatPublicProfile(user, preferences),
       email: user.email,
-      timezone: user.timezone,
-      bio: user.bio,
-      experience: user.experience,
-      calComLink: user.calComLink,
-      createdAt: user.createdAt,
-      onboarding,
       upcomingSessions,
     };
   },
@@ -175,11 +205,9 @@ export const getProfile = query({
 /**
  * updateProfile
  *
- * Updates editable profile fields for a given user.
- * Auth-owned fields (email, passwordHash, fullName, createdAt) are excluded.
- *
- * Once the auth pipeline is complete, replace the `userId` arg with
- * ctx.auth.getUserIdentity() to lock this down to the current user.
+ * Patches editable profile fields. Only fields that are passed get updated.
+ * Core identity fields (email, fullName) are intentionally excluded here
+ * and should go through a dedicated identity-update flow once auth is live.
  *
  * Returns the updated userId on success.
  */
@@ -193,12 +221,13 @@ export const updateProfile = mutation({
   },
   handler: async (ctx, { userId, ...fields }) => {
     const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
+    if (!user) throw new Error(`User not found: ${userId}`);
 
-    // Only apply fields that were actually passed
     const patch = Object.fromEntries(
-      Object.entries(fields).filter(([, v]) => v !== undefined)
+      Object.entries(fields).filter(([, val]) => val !== undefined)
     );
+
+    if (Object.keys(patch).length === 0) return userId; // nothing to do
 
     await ctx.db.patch(userId, patch);
     return userId;
@@ -208,26 +237,17 @@ export const updateProfile = mutation({
 /**
  * listProfiles
  *
- * All user profiles for the browse page.
- * Strips email — callers get only public-facing fields.
+ * All public-facing profiles for the browse/matching page.
+ * Strips email and upcoming sessions — those are only available via getProfile.
  */
 export const listProfiles = query({
-  handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
+  handler: async (ctx): Promise<PublicProfile[]> => {
+    const users: Doc<"users">[] = await ctx.db.query("users").collect();
 
     return Promise.all(
-      users.map(async (user: any) => {
-        const onboarding = await getOnboardingInfo(ctx, user._id);
-
-        return {
-          userId: user._id,
-          fullName: user.fullName,
-          timezone: user.timezone,
-          bio: user.bio,
-          experience: user.experience,
-          calComLink: user.calComLink,
-          onboarding,
-        };
+      users.map(async (user) => {
+        const preferences = await resolvePreferences(ctx, user._id);
+        return formatPublicProfile(user, preferences);
       })
     );
   },
