@@ -2,6 +2,8 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 
+declare const process: { env: Record<string, string | undefined> };
+
 const http = httpRouter();
 
 // Cal.com fires this webhook when a booking is created/confirmed.
@@ -10,7 +12,40 @@ http.route({
   path: "/webhooks/cal",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const body = await request.json();
+    const secret = process.env.CAL_WEBHOOK_SECRET;
+    if (!secret) {
+      return new Response("Webhook secret not configured", { status: 500 });
+    }
+
+    const signature = request.headers.get("x-cal-signature-256");
+    if (!signature) {
+      return new Response("Missing signature", { status: 401 });
+    }
+
+    const rawBody = await request.text();
+
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const signatureBuffer = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      encoder.encode(rawBody)
+    );
+    const computedSignature = Array.from(new Uint8Array(signatureBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    if (computedSignature !== signature) {
+      return new Response("Invalid signature", { status: 401 });
+    }
+
+    const body = JSON.parse(rawBody);
 
     if (body.triggerEvent !== "BOOKING_CREATED") {
       return new Response(null, { status: 200 });
