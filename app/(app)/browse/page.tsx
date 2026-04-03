@@ -9,6 +9,12 @@ import { useState } from "react";
 
 const typeFilters = ["All", "Technical", "Behavioral", "Case", "Product"];
 
+function buildScheduleUrl(schedulingUrl: string, interviewType: string | null): string {
+  if (!interviewType) return schedulingUrl;
+  const separator = schedulingUrl.includes("?") ? "&" : "?";
+  return `${schedulingUrl}${separator}metadata[interviewType]=${encodeURIComponent(interviewType)}`;
+}
+
 const roleLabels: Record<UserRole, string> = {
   interviewer: "Interviewer",
   interviewee: "Interviewee",
@@ -138,7 +144,10 @@ export default function BrowsePage() {
 
                   {user.schedulingUrl ? (
                     <a
-                      href={user.schedulingUrl}
+                      href={buildScheduleUrl(
+                        user.schedulingUrl,
+                        activeType !== "All" ? activeType.toLowerCase() : null
+                      )}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium bg-accent hover:bg-accent-hover text-foreground rounded-lg transition-colors"

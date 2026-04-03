@@ -35,10 +35,16 @@ export default defineSchema({
   sessions: defineTable({
     interviewerId: v.id("users"),
     intervieweeId: v.id("users"),
-    topicId: v.id("topics"),
-    interviewTypeId: v.id("interviewTypes"),
+    topicId: v.optional(v.id("topics")),
+    interviewTypeId: v.optional(v.id("interviewTypes")),
     status: v.string(),
-    scheduledAt: v.number(),  // fixed: seed uses Date.now() which is a number
-  }),
+    scheduledAt: v.number(),
+    meetingLink: v.optional(v.string()),
+    calBookingUid: v.optional(v.string()),
+  })
+    .index("by_interviewer", ["interviewerId"])
+    .index("by_interviewee", ["intervieweeId"])
+    .index("by_schedule_time", ["scheduledAt"])
+    .index("by_cal_booking_uid", ["calBookingUid"]),
 
 });
