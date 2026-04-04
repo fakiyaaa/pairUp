@@ -18,7 +18,6 @@ def create_app(config_class=Config):
     JWTManager(app)
 
     init_db(app)
-    app.teardown_appcontext(close_db)
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(profiles_bp, url_prefix="/profiles")
