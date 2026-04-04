@@ -12,3 +12,5 @@ class Config:
     DATABASE_URL = os.getenv("DATABASE_URL", "")
     CAL_WEBHOOK_SECRET = os.getenv("CAL_WEBHOOK_SECRET", "")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
