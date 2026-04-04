@@ -20,7 +20,9 @@ import {
   Star,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { authApi } from "@/lib/services/auth";
 
 const timezones = [
   { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
@@ -46,6 +48,7 @@ const allTopics = [
 ];
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(currentUser.name);
   const [bio, setBio] = useState(currentUser.bio || "");
@@ -342,12 +345,15 @@ export default function ProfilePage() {
 
       {/* Sign out */}
       <div className="mt-12 pt-6 border-t border-border">
-        <Link
-          href="/"
-          className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+        <button
+          onClick={async () => {
+            await authApi.logout();
+            router.push("/");
+          }}
+          className="text-[13px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           Sign out
-        </Link>
+        </button>
       </div>
     </div>
   );
