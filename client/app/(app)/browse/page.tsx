@@ -7,7 +7,7 @@ import type { UserRole } from "@/lib/types";
 import { ExternalLink, Search, Star } from "lucide-react";
 import { useState } from "react";
 
-const typeFilters = ["All", "Technical", "Behavioral", "Case", "Product"];
+const typeFilters = ["All", "Technical", "Behavioral"];
 
 function buildScheduleUrl(schedulingUrl: string, interviewType: string | null): string {
   if (!interviewType) return schedulingUrl;
