@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 10, "column": 0}, "map": {"version":3,"sources":["file:///Users/tatiane/Documents/pairUp/app/ConvexClientProvider.tsx"],"sourcesContent":["\"use client\";\n\nimport { ConvexProvider, ConvexReactClient } from \"convex/react\";\nimport { ReactNode } from \"react\";\n\nconst convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);\n\nexport function ConvexClientProvider({ children }: { children: ReactNode }) {\n  return <ConvexProvider client={convex}>{children}</ConvexProvider>;\n}\n\n\n"],"names":[],"mappings":";;;;;AAEA;AAAA;AAFA;;;AAKA,MAAM,SAAS,IAAI,6KAAiB,CAAC,QAAQ,GAAG,CAAC,sBAAsB;AAEhE,SAAS,qBAAqB,EAAE,QAAQ,EAA2B;IACxE,qBAAO,8OAAC,0KAAc;QAAC,QAAQ;kBAAS;;;;;;AAC1C"}}]
+}
