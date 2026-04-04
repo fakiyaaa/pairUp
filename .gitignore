@@ -43,3 +43,9 @@ next-env.d.ts
 # python
 __pycache__/
 *.pyc
+
+# virtual environments
+.venv/
+
+# claude
+/.superpowers
