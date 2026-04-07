@@ -6,11 +6,14 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { authApi } from "@/lib/services/auth";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
@@ -31,9 +34,18 @@ export default function LoginPage() {
         </p>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            router.push("/dashboard");
+            setError("");
+            setLoading(true);
+            try {
+              await authApi.login(email, password);
+              router.push("/dashboard");
+            } catch (err) {
+              setError(err instanceof Error ? err.message : "Login failed");
+            } finally {
+              setLoading(false);
+            }
           }}
           className="flex flex-col gap-4"
         >
@@ -63,8 +75,11 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <Button type="submit" size="lg" className="w-full mt-2">
-            Sign in
+          {error && (
+            <p className="text-[13px] text-red-500">{error}</p>
+          )}
+          <Button type="submit" size="lg" className="w-full mt-2" disabled={loading}>
+            {loading ? "Signing in…" : "Sign in"}
           </Button>
         </form>
 

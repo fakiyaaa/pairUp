@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Calendar, Link2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { authApi } from "@/lib/services/auth";
 
 const timezones = [
   { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
@@ -91,6 +92,8 @@ export default function SignupPage() {
 
   // Step 4
   const [schedulingUrl, setSchedulingUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const toggleType = (id: string) =>
     setSelectedTypes((prev) =>
@@ -101,6 +104,26 @@ export default function SignupPage() {
     setSelectedTopics((prev) =>
       prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
     );
+
+  async function handleSignup(withSchedulingUrl: boolean) {
+    setError("");
+    setLoading(true);
+    try {
+      await authApi.signup({
+        full_name: name,
+        email,
+        password,
+        timezone,
+        experience: experience || undefined,
+        cal_com_link: withSchedulingUrl && schedulingUrl ? schedulingUrl : undefined,
+      });
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Signup failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
@@ -352,16 +375,21 @@ export default function SignupPage() {
                 Works with Calendly, cal.com, or any direct booking link.
               </p>
 
+              {error && (
+                <p className="text-[13px] text-red-500">{error}</p>
+              )}
               <Button
                 size="lg"
                 className="w-full mt-2"
-                onClick={() => router.push("/dashboard")}
+                onClick={() => handleSignup(true)}
+                disabled={loading}
               >
-                Complete setup
+                {loading ? "Creating account…" : "Complete setup"}
               </Button>
 
               <button
-                onClick={() => router.push("/dashboard")}
+                onClick={() => handleSignup(false)}
+                disabled={loading}
                 className="text-[13px] text-muted-foreground hover:text-foreground text-center transition-colors cursor-pointer"
               >
                 Skip for now
