@@ -14,7 +14,13 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    CORS(app, origins=[app.config["FRONTEND_URL"]], supports_credentials=True)
+    frontend_origin = app.config["FRONTEND_URL"]
+    allowed_origins = {
+        frontend_origin,
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    }
+    CORS(app, origins=list(allowed_origins), supports_credentials=True)
     JWTManager(app)
 
     init_db(app)

@@ -1,4 +1,5 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL!;
+const BASE =
+  process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:5001";
 
 export type AuthUser = {
   id: string;
@@ -17,8 +18,22 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
     credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Request failed");
+  const contentType = res.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+  const data = isJson ? await res.json() : null;
+
+  if (!res.ok) {
+    const errorMessage =
+      data && typeof data === "object" && "error" in data
+        ? String((data as { error?: unknown }).error)
+        : "Request failed";
+    throw new Error(errorMessage);
+  }
+
+  if (!isJson) {
+    throw new Error("Server returned an unexpected response.");
+  }
+
   return data as T;
 }
 

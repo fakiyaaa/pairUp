@@ -5,8 +5,7 @@ import { currentUser, notifications } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { Bell } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Home" },
@@ -15,9 +14,36 @@ const navItems = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const [pathname, setPathname] = useState(
+    typeof window !== "undefined" ? window.location.pathname : ""
+  );
   const [showNotifs, setShowNotifs] = useState(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    const syncPathname = () => setPathname(window.location.pathname);
+
+    const origPushState = window.history.pushState;
+    const origReplaceState = window.history.replaceState;
+
+    window.history.pushState = function (...args) {
+      origPushState.apply(window.history, args);
+      syncPathname();
+    };
+    window.history.replaceState = function (...args) {
+      origReplaceState.apply(window.history, args);
+      syncPathname();
+    };
+
+    window.addEventListener("popstate", syncPathname);
+    syncPathname();
+
+    return () => {
+      window.history.pushState = origPushState;
+      window.history.replaceState = origReplaceState;
+      window.removeEventListener("popstate", syncPathname);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

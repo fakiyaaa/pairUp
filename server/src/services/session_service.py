@@ -71,3 +71,125 @@ def cancel_session(payload: dict):
         (cal_booking_uid,),
     )
     db.commit()
+
+
+def _ensure_feedback_table(cur):
+    """Ensure the feedback table exists for local/dev persistence."""
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS session_feedback (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            session_id TEXT NOT NULL,
+            from_user_id TEXT NOT NULL,
+            from_user_name TEXT,
+            to_user_id TEXT,
+            rating INTEGER NOT NULL,
+            communication INTEGER NOT NULL,
+            preparedness INTEGER NOT NULL,
+            technical_skill INTEGER NOT NULL,
+            strengths TEXT,
+            improvements TEXT,
+            notes TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """
+    )
+
+
+def save_feedback(
+    session_id: str,
+    from_user_id: str,
+    from_user_name: str,
+    to_user_id: str,
+    rating: int,
+    communication: int,
+    preparedness: int,
+    technical_skill: int,
+    strengths: str = "",
+    improvements: str = "",
+    notes: str = "",
+):
+    """Insert a feedback row and return the created record."""
+    db = get_db()
+    cur = db.cursor()
+    _ensure_feedback_table(cur)
+
+    cur.execute(
+        """
+        INSERT INTO session_feedback (
+            session_id,
+            from_user_id,
+            from_user_name,
+            to_user_id,
+            rating,
+            communication,
+            preparedness,
+            technical_skill,
+            strengths,
+            improvements,
+            notes
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING
+            id,
+            session_id,
+            from_user_id,
+            from_user_name,
+            to_user_id,
+            rating,
+            communication,
+            preparedness,
+            technical_skill,
+            strengths,
+            improvements,
+            notes,
+            created_at
+        """,
+        (
+            session_id,
+            from_user_id,
+            from_user_name,
+            to_user_id,
+            rating,
+            communication,
+            preparedness,
+            technical_skill,
+            strengths,
+            improvements,
+            notes,
+        ),
+    )
+    row = cur.fetchone()
+    db.commit()
+    return row
+
+
+def get_latest_feedback(session_id: str):
+    """Fetch the most recently submitted feedback for a session."""
+    db = get_db()
+    cur = db.cursor()
+    _ensure_feedback_table(cur)
+    cur.execute(
+        """
+        SELECT
+            id,
+            session_id,
+            from_user_id,
+            from_user_name,
+            to_user_id,
+            rating,
+            communication,
+            preparedness,
+            technical_skill,
+            strengths,
+            improvements,
+            notes,
+            created_at
+        FROM session_feedback
+        WHERE session_id = %s
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        (session_id,),
+    )
+    return cur.fetchone()

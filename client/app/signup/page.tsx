@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 import { ArrowLeft, ArrowRight, Calendar, Link2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { authApi } from "@/lib/services/auth";
 
@@ -73,7 +72,6 @@ const roles: { id: UserRole; label: string; description: string }[] = [
 ];
 
 export default function SignupPage() {
-  const router = useRouter();
   const [step, setStep] = useState(1);
 
   // Step 1
@@ -117,7 +115,7 @@ export default function SignupPage() {
         experience: experience || undefined,
         cal_com_link: withSchedulingUrl && schedulingUrl ? schedulingUrl : undefined,
       });
-      router.push("/dashboard");
+      window.location.assign("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
     } finally {

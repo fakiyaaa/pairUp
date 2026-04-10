@@ -1,3 +1,6 @@
+import os
+import uuid
+
 from src.db import get_db
 from src.supabase_client import get_supabase
 
@@ -6,8 +9,25 @@ def signup(
     full_name, email, password, timezone, experience=None, bio=None, cal_com_link=None
 ):
     """Create Supabase Auth user + insert into users table. Returns (user_dict, error)."""
-    sb = get_supabase()
+    # Local-dev fallback when Supabase isn't configured yet.
+    if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_KEY"):
+        user_id = str(uuid.uuid4())
+        return {
+            "access_token": f"dev-access-{user_id}",
+            "refresh_token": f"dev-refresh-{user_id}",
+            "user": {
+                "id": user_id,
+                "full_name": full_name,
+                "email": email,
+                "timezone": timezone,
+                "experience": experience,
+                "bio": bio,
+                "cal_com_link": cal_com_link,
+            },
+        }, None
+
     try:
+        sb = get_supabase()
         response = sb.auth.sign_up(
             {
                 "email": email,
@@ -65,8 +85,8 @@ def signup(
 
 def login(email, password):
     """Sign in with Supabase Auth, fetch profile from users table. Returns (data_dict, error)."""
-    sb = get_supabase()
     try:
+        sb = get_supabase()
         response = sb.auth.sign_in_with_password(
             {
                 "email": email,
@@ -98,8 +118,8 @@ def login(email, password):
 
 def logout(access_token):
     """Sign out from Supabase Auth. Returns (None, error)."""
-    sb = get_supabase()
     try:
+        sb = get_supabase()
         sb.auth.sign_out()
         return None, None
     except Exception as e:
@@ -108,8 +128,8 @@ def logout(access_token):
 
 def refresh(refresh_token):
     """Refresh the session. Returns (tokens_dict, error)."""
-    sb = get_supabase()
     try:
+        sb = get_supabase()
         response = sb.auth.refresh_session(refresh_token)
     except Exception as e:
         return None, str(e)

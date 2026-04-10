@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/ui/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { currentUser, sessions } from "@/lib/mock-data";
+import { sessionsApi, type PersistedFeedback } from "@/lib/services/sessions";
 import {
   formatDate,
   formatTime,
@@ -23,7 +24,7 @@ import {
   Video,
 } from "lucide-react";
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 
 export default function SessionDetailPage({
   params,
@@ -34,6 +35,10 @@ export default function SessionDetailPage({
   const session = sessions.find((s) => s.id === id);
   const [showFeedback, setShowFeedback] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [persistedFeedback, setPersistedFeedback] =
+    useState<PersistedFeedback | null>(null);
   const [rating, setRating] = useState(0);
   const [communication, setCommunication] = useState(0);
   const [preparedness, setPreparedness] = useState(0);
@@ -60,6 +65,70 @@ export default function SessionDetailPage({
   const isInterviewer = session.interviewer.id === currentUser.id;
   const partner = isInterviewer ? session.interviewee : session.interviewer;
   const scheduled = new Date(session.scheduledAt);
+  const effectiveFeedback = useMemo(() => {
+    if (persistedFeedback) {
+      return {
+        rating: persistedFeedback.rating,
+        communication: persistedFeedback.communication,
+        preparedness: persistedFeedback.preparedness,
+        technicalSkill: persistedFeedback.technical_skill,
+        strengths: persistedFeedback.strengths || "",
+        improvements: persistedFeedback.improvements || "",
+        notes: persistedFeedback.notes || "",
+        fromUser: { name: persistedFeedback.from_user_name },
+      };
+    }
+    return session.feedback;
+  }, [persistedFeedback, session.feedback]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFeedback() {
+      try {
+        const res = await sessionsApi.getFeedback(session.id);
+        if (!cancelled) setPersistedFeedback(res.feedback);
+      } catch {
+        // Keep UI usable with mock fallback if backend fetch fails.
+      }
+    }
+
+    loadFeedback();
+    return () => {
+      cancelled = true;
+    };
+  }, [session.id]);
+
+  async function handleSubmitFeedback() {
+    if (!rating || !communication || !preparedness || !technicalSkill) {
+      setError("Please add ratings before submitting.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    try {
+      const res = await sessionsApi.createFeedback(session.id, {
+        from_user_id: currentUser.id,
+        from_user_name: currentUser.name,
+        to_user_id: partner.id,
+        rating,
+        communication,
+        preparedness,
+        technical_skill: technicalSkill,
+        strengths,
+        improvements,
+        notes,
+      });
+      setPersistedFeedback(res.feedback);
+      setSubmitted(true);
+      setShowFeedback(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit feedback");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div>
@@ -188,16 +257,16 @@ export default function SessionDetailPage({
       </section>
 
       {/* Feedback received */}
-      {session.feedback && (
+      {effectiveFeedback && (
         <section className="mb-8">
           <h2 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-4">
             Feedback
           </h2>
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <StarRating value={session.feedback.rating} readonly size="sm" />
+              <StarRating value={effectiveFeedback.rating} readonly size="sm" />
               <span className="text-[13px] text-muted-foreground">
-                from {session.feedback.fromUser.name}
+                from {effectiveFeedback.fromUser.name}
               </span>
             </div>
 
@@ -205,15 +274,15 @@ export default function SessionDetailPage({
               {[
                 {
                   label: "Communication",
-                  value: session.feedback.communication,
+                  value: effectiveFeedback.communication,
                 },
                 {
                   label: "Preparedness",
-                  value: session.feedback.preparedness,
+                  value: effectiveFeedback.preparedness,
                 },
                 {
                   label: "Technical",
-                  value: session.feedback.technicalSkill,
+                  value: effectiveFeedback.technicalSkill,
                 },
               ].map((item) => (
                 <div
@@ -228,33 +297,33 @@ export default function SessionDetailPage({
               ))}
             </div>
 
-            {session.feedback.strengths && (
+            {effectiveFeedback.strengths && (
               <div>
                 <p className="text-[12px] font-medium text-muted-foreground mb-1">
                   Strengths
                 </p>
                 <p className="text-[14px] leading-relaxed">
-                  {session.feedback.strengths}
+                  {effectiveFeedback.strengths}
                 </p>
               </div>
             )}
-            {session.feedback.improvements && (
+            {effectiveFeedback.improvements && (
               <div>
                 <p className="text-[12px] font-medium text-muted-foreground mb-1">
                   Improvements
                 </p>
                 <p className="text-[14px] leading-relaxed">
-                  {session.feedback.improvements}
+                  {effectiveFeedback.improvements}
                 </p>
               </div>
             )}
-            {session.feedback.notes && (
+            {effectiveFeedback.notes && (
               <div>
                 <p className="text-[12px] font-medium text-muted-foreground mb-1">
                   Notes
                 </p>
                 <p className="text-[14px] leading-relaxed">
-                  {session.feedback.notes}
+                  {effectiveFeedback.notes}
                 </p>
               </div>
             )}
@@ -263,7 +332,7 @@ export default function SessionDetailPage({
       )}
 
       {/* Feedback form */}
-      {session.status === "completed" && !session.feedback && !submitted && (
+      {session.status === "completed" && !effectiveFeedback && !submitted && (
         <section>
           {!showFeedback ? (
             <button
@@ -341,11 +410,15 @@ export default function SessionDetailPage({
                   <Button
                     variant="secondary"
                     onClick={() => setShowFeedback(false)}
+                    disabled={saving}
                   >
                     Cancel
                   </Button>
-                  <Button onClick={() => setSubmitted(true)}>Submit</Button>
+                  <Button onClick={handleSubmitFeedback} disabled={saving}>
+                    {saving ? "Submitting..." : "Submit"}
+                  </Button>
                 </div>
+                {error && <p className="text-[13px] text-red-500">{error}</p>}
               </div>
             </div>
           )}
