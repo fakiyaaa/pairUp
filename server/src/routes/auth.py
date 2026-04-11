@@ -1,6 +1,8 @@
-from flask import Blueprint, request, jsonify, make_response, current_app
+from flask import Blueprint, request, jsonify, make_response, current_app, g
 
 from src.services.auth_service import signup, login, logout, refresh
+from src.middleware.auth import require_auth
+from src.db import get_db
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -114,3 +116,17 @@ def refresh_route():
     response = make_response(jsonify({"message": "Tokens refreshed"}))
     _set_auth_cookies(response, result["access_token"], result["refresh_token"])
     return response
+
+
+@auth_bp.route("/me", methods=["GET"])
+@require_auth
+def me_route():
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT * FROM users WHERE id = %s", (g.user.id,))
+    user_row = cur.fetchone()
+
+    if not user_row:
+        return jsonify({"error": "User profile not found"}), 404
+
+    return jsonify({"user": dict(user_row)})
