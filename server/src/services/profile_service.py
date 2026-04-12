@@ -67,11 +67,15 @@ def get_me(user_id):
     )
     profile["interview_types"] = [r["name"] for r in cur.fetchall()]
 
-    cur.execute(
-        "SELECT topic_name FROM user_topics WHERE user_id = %s",
-        (user_id,),
-    )
-    profile["topics"] = [r["topic_name"] for r in cur.fetchall()]
+    try:
+        cur.execute(
+            "SELECT topic_name FROM user_topics WHERE user_id = %s",
+            (user_id,),
+        )
+        profile["topics"] = [r["topic_name"] for r in cur.fetchall()]
+    except Exception:
+        db.rollback()
+        profile["topics"] = []
 
     cur.execute(
         """
