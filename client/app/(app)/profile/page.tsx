@@ -4,25 +4,14 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { StarRating } from "@/components/ui/star-rating";
 import { Textarea } from "@/components/ui/textarea";
-import { currentUser, sessions } from "@/lib/mock-data";
-import {
-  cn,
-  difficultyLabels,
-  formatDate,
-  interviewTypeLabels,
-} from "@/lib/utils";
-import type { Difficulty } from "@/lib/types";
-import {
-  ExternalLink,
-  Link2,
-  Star,
-} from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { profileApi, type ProfileData } from "@/lib/services/profile";
 import { authApi } from "@/lib/services/auth";
+import { cn, difficultyLabels, formatDate, interviewTypeLabels } from "@/lib/utils";
+import type { Difficulty } from "@/lib/types";
+import { ExternalLink, Link2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const timezones = [
   { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
@@ -44,39 +33,93 @@ const interviewTypes = [
 const allTopics = [
   "Data Structures", "Algorithms", "System Design", "Dynamic Programming",
   "Machine Learning", "Product Sense", "Metrics", "Strategy",
-  "Market Sizing", "Leadership", "React", "Node.js", "API Design", "Python",
+  "Market Sizing", "Profitability", "Go-to-Market", "Leadership",
+  "Conflict Resolution", "React", "Node.js", "API Design", "Python",
+  "SQL", "Statistics", "Brain Teasers",
 ];
 
 export default function ProfilePage() {
   const router = useRouter();
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(currentUser.name);
-  const [bio, setBio] = useState(currentUser.bio || "");
-  const [timezone, setTimezone] = useState(currentUser.timezone);
-  const [selectedTypes, setSelectedTypes] = useState(
-    currentUser.interviewTypes as string[]
-  );
-  const [selectedTopics, setSelectedTopics] = useState(currentUser.topics);
-  const [experience, setExperience] = useState<Difficulty>(
-    currentUser.experienceLevel
-  );
-  const [schedulingUrl, setSchedulingUrl] = useState(
-    currentUser.schedulingUrl || ""
-  );
+  const [saving, setSaving] = useState(false);
 
-  const completed = sessions.filter((s) => s.status === "completed");
+  // Edit form state
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [timezone, setTimezone] = useState("");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [experience, setExperience] = useState<Difficulty>("intermediate");
+  const [schedulingUrl, setSchedulingUrl] = useState("");
 
-  const toggleType = (id: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+  useEffect(() => {
+    profileApi
+      .getMe()
+      .then((data) => {
+        setProfile(data);
+        setName(data.full_name);
+        setBio(data.bio ?? "");
+        setTimezone(data.timezone ?? "");
+        setSelectedTypes(data.interview_types ?? []);
+        setSelectedTopics(data.topics ?? []);
+        setExperience((data.experience as Difficulty) ?? "intermediate");
+        setSchedulingUrl(data.cal_com_link ?? "");
+      })
+      .catch(() => setError("Failed to load profile"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  function startEditing() {
+    if (!profile) return;
+    setName(profile.full_name);
+    setBio(profile.bio ?? "");
+    setTimezone(profile.timezone ?? "");
+    setSelectedTypes(profile.interview_types ?? []);
+    setSelectedTopics(profile.topics ?? []);
+    setExperience((profile.experience as Difficulty) ?? "intermediate");
+    setSchedulingUrl(profile.cal_com_link ?? "");
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const updated = await profileApi.updateMe({
+        full_name: name,
+        bio,
+        timezone,
+        interview_types: selectedTypes,
+        topics: selectedTopics,
+        experience,
+        cal_com_link: schedulingUrl,
+      });
+      setProfile(updated);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const toggleType = (id: string) =>
+    setSelectedTypes((prev: string[]) =>
+      prev.includes(id) ? prev.filter((t: string) => t !== id) : [...prev, id]
     );
-  };
 
-  const toggleTopic = (topic: string) => {
-    setSelectedTopics((prev) =>
-      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
+  const toggleTopic = (topic: string) =>
+    setSelectedTopics((prev: string[]) =>
+      prev.includes(topic) ? prev.filter((t: string) => t !== topic) : [...prev, topic]
     );
-  };
+
+  if (loading) {
+    return <p className="text-[14px] text-muted-foreground">Loading…</p>;
+  }
+
+  if (error || !profile) {
+    return <p className="text-[14px] text-destructive">{error || "Profile not found."}</p>;
+  }
 
   return (
     <div>
@@ -85,7 +128,7 @@ export default function ProfilePage() {
         <h1 className="text-[28px] font-semibold tracking-tight">Profile</h1>
         {!editing ? (
           <button
-            onClick={() => setEditing(true)}
+            onClick={startEditing}
             className="text-[13px] font-medium text-foreground underline underline-offset-2 decoration-border hover:decoration-foreground cursor-pointer"
           >
             Edit
@@ -98,8 +141,8 @@ export default function ProfilePage() {
             >
               Cancel
             </button>
-            <Button size="sm" onClick={() => setEditing(false)}>
-              Save
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : "Save"}
             </Button>
           </div>
         )}
@@ -107,7 +150,7 @@ export default function ProfilePage() {
 
       {/* Profile header */}
       <div className="flex items-start gap-5 mb-10">
-        <Avatar name={currentUser.name} size="xl" />
+        <Avatar name={profile.full_name} size="xl" />
         <div className="flex-1">
           {editing ? (
             <div className="space-y-4">
@@ -123,7 +166,7 @@ export default function ProfilePage() {
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={3}
-                placeholder="About you..."
+                placeholder="About you…"
               />
               <Select
                 id="tz"
@@ -135,24 +178,17 @@ export default function ProfilePage() {
             </div>
           ) : (
             <>
-              <h2 className="text-[18px] font-semibold">{name}</h2>
+              <h2 className="text-[18px] font-semibold">{profile.full_name}</h2>
               <p className="text-[13px] text-muted-foreground mb-2">
-                {currentUser.email} &middot; {timezone}
+                {profile.email} &middot; {profile.timezone}
               </p>
-              <p className="text-[14px] text-muted-foreground leading-relaxed">
-                {bio}
-              </p>
+              {profile.bio && (
+                <p className="text-[14px] text-muted-foreground leading-relaxed">
+                  {profile.bio}
+                </p>
+              )}
               <div className="flex items-center gap-4 mt-3 text-[13px] text-muted-foreground">
-                <span>
-                  {currentUser.completedSessions} sessions
-                </span>
-                <span className="flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                  {currentUser.rating}
-                </span>
-                <span>
-                  Joined {formatDate(currentUser.joinedAt)}
-                </span>
+                <span>Joined {formatDate(profile.created_at)}</span>
               </div>
             </>
           )}
@@ -202,9 +238,7 @@ export default function ProfilePage() {
             />
 
             <div>
-              <label className="text-[13px] font-medium block mb-2">
-                Topics
-              </label>
+              <label className="text-[13px] font-medium block mb-2">Topics</label>
               <div className="flex flex-wrap gap-2">
                 {allTopics.map((topic) => (
                   <button
@@ -225,81 +259,84 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div>
-              <p className="text-[12px] text-muted-foreground mb-1.5">
-                Interview types
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedTypes.map((t) => (
-                  <span
-                    key={t}
-                    className="px-2 py-0.5 text-[12px] bg-muted rounded-md font-medium"
-                  >
-                    {interviewTypeLabels[t]}
-                  </span>
-                ))}
+            {profile.interview_types.length > 0 && (
+              <div>
+                <p className="text-[12px] text-muted-foreground mb-1.5">
+                  Interview types
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {profile.interview_types.map((t) => (
+                    <span
+                      key={t}
+                      className="px-2 py-0.5 text-[12px] bg-muted rounded-md font-medium"
+                    >
+                      {interviewTypeLabels[t] ?? t}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div>
-              <p className="text-[12px] text-muted-foreground mb-1.5">
-                Experience
-              </p>
-              <p className="text-[14px] font-medium">
-                {difficultyLabels[experience]}
-              </p>
-            </div>
-            <div>
-              <p className="text-[12px] text-muted-foreground mb-1.5">Topics</p>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedTopics.map((t) => (
-                  <span
-                    key={t}
-                    className="px-2 py-0.5 text-[12px] bg-muted rounded-md"
-                  >
-                    {t}
-                  </span>
-                ))}
+            )}
+            {profile.experience && (
+              <div>
+                <p className="text-[12px] text-muted-foreground mb-1.5">
+                  Experience
+                </p>
+                <p className="text-[14px] font-medium">
+                  {difficultyLabels[profile.experience] ?? profile.experience}
+                </p>
               </div>
-            </div>
+            )}
+            {profile.topics.length > 0 && (
+              <div>
+                <p className="text-[12px] text-muted-foreground mb-1.5">Topics</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {profile.topics.map((t) => (
+                    <span
+                      key={t}
+                      className="px-2 py-0.5 text-[12px] bg-muted rounded-md"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
 
-      {/* Recent sessions */}
-      {completed.length > 0 && (
-        <section>
+      {/* Upcoming sessions */}
+      {profile.upcoming_sessions.length > 0 && (
+        <section className="mb-10">
           <h2 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-4">
-            Recent sessions
+            Upcoming sessions
           </h2>
           <div className="flex flex-col divide-y divide-border">
-            {completed.map((session) => {
-              const partner =
-                session.interviewer.id === currentUser.id
-                  ? session.interviewee
-                  : session.interviewer;
-              return (
-                <Link
-                  key={session.id}
-                  href={`/sessions/${session.id}`}
-                  className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:opacity-80 transition-opacity"
-                >
-                  <Avatar name={partner.name} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium">{partner.name}</p>
-                    <p className="text-[12px] text-muted-foreground">
-                      {interviewTypeLabels[session.interviewType]} &middot;{" "}
-                      {formatDate(session.scheduledAt)}
-                    </p>
-                  </div>
-                  {session.feedback && (
-                    <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      {session.feedback.rating}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+            {profile.upcoming_sessions.map((session) => (
+              <div
+                key={session.id}
+                className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+              >
+                <Avatar name={session.partner_name} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium">{session.partner_name}</p>
+                  <p className="text-[12px] text-muted-foreground">
+                    {interviewTypeLabels[session.interview_type] ?? session.interview_type}{" "}
+                    &middot; {formatDate(session.scheduled_at)}
+                  </p>
+                </div>
+                {session.meeting_link && (
+                  <a
+                    href={session.meeting_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[12px] text-muted-foreground hover:text-foreground"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
         </section>
       )}
@@ -320,21 +357,21 @@ export default function ProfilePage() {
               className="w-full pl-9 pr-4 py-2.5 text-[14px] bg-card border border-border rounded-xl placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
             />
           </div>
-        ) : schedulingUrl ? (
+        ) : profile.cal_com_link ? (
           <a
-            href={schedulingUrl}
+            href={profile.cal_com_link}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-[14px] text-foreground hover:underline underline-offset-2"
           >
-            {schedulingUrl.replace(/^https?:\/\//, "")}
+            {profile.cal_com_link.replace(/^https?:\/\//, "")}
             <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
           </a>
         ) : (
           <p className="text-[14px] text-muted-foreground">
             No scheduling link yet.{" "}
             <button
-              onClick={() => setEditing(true)}
+              onClick={startEditing}
               className="text-foreground underline underline-offset-2 cursor-pointer"
             >
               Add one
