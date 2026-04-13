@@ -2,12 +2,11 @@
 
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/context/auth";
+import { get } from "@/lib/services/api";
 import { formatDate, formatTime, interviewTypeLabels } from "@/lib/utils";
 import { ArrowRight, Video } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL!;
 
 type ApiSession = {
   id: string;
@@ -27,8 +26,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${BASE}/sessions/`, { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : []))
+    get<ApiSession[]>("/sessions/")
       .then(setSessions)
       .catch(() => setSessions([]))
       .finally(() => setLoading(false));

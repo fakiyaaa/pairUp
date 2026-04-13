@@ -1,4 +1,4 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL!;
+import { get, post } from "@/lib/services/api";
 
 export type AuthUser = {
   id: string;
@@ -10,19 +10,9 @@ export type AuthUser = {
   cal_com_link?: string;
 };
 
-async function post<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: body ? { "Content-Type": "application/json" } : {},
-    credentials: "include",
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Request failed");
-  return data as T;
-}
-
 export const authApi = {
+  me: () => get<{ user: AuthUser }>("/auth/me"),
+
   login: (email: string, password: string) =>
     post<{ user: AuthUser }>("/auth/login", { email, password }),
 
