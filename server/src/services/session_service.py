@@ -1,6 +1,39 @@
 from src.db import get_db
 
 
+def get_upcoming_sessions(user_id: str):
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute(
+        """
+        SELECT
+            s.id,
+            s.status,
+            s.scheduled_at,
+            s.meeting_link,
+            it.name AS interview_type,
+            interviewer.id   AS interviewer_id,
+            interviewer.full_name AS interviewer_name,
+            interviewer.email     AS interviewer_email,
+            interviewee.id   AS interviewee_id,
+            interviewee.full_name AS interviewee_name,
+            interviewee.email     AS interviewee_email
+        FROM sessions s
+        JOIN users interviewer ON interviewer.id = s.interviewer_id
+        JOIN users interviewee ON interviewee.id = s.interviewee_id
+        LEFT JOIN interview_types it ON it.id = s.interview_type_id
+        WHERE (s.interviewer_id = %s OR s.interviewee_id = %s)
+          AND s.status = 'confirmed'
+          AND s.scheduled_at > NOW()
+        ORDER BY s.scheduled_at ASC
+        """,
+        (user_id, user_id),
+    )
+
+    return cur.fetchall()
+
+
 def _get_user_id_by_email(cur, email: str):
     cur.execute("SELECT id FROM users WHERE email = %s", (email,))
     row = cur.fetchone()
