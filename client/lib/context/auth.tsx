@@ -6,6 +6,7 @@ import { authApi, type AuthUser } from "@/lib/services/auth";
 type AuthContextType = {
   user: AuthUser | null;
   loading: boolean;
+  setUser: (user: AuthUser | null) => void;
   logout: () => Promise<void>;
 };
 
@@ -31,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, loading, setUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

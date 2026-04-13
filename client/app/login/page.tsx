@@ -7,9 +7,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { authApi } from "@/lib/services/auth";
+import { useAuth } from "@/lib/context/auth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,7 +41,8 @@ export default function LoginPage() {
             setError("");
             setLoading(true);
             try {
-              await authApi.login(email, password);
+              const { user } = await authApi.login(email, password);
+              setUser(user);
               router.push("/dashboard");
             } catch (err) {
               setError(err instanceof Error ? err.message : "Login failed");
