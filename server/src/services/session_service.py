@@ -1,37 +1,73 @@
 from src.db import get_db
 
 
-def get_upcoming_sessions(user_id: str):
+def _session_query(where_clause: str, params: tuple):
     db = get_db()
     cur = db.cursor()
 
     cur.execute(
-        """
+        f"""
         SELECT
             s.id,
             s.status,
             s.scheduled_at,
             s.meeting_link,
             it.name AS interview_type,
-            interviewer.id   AS interviewer_id,
-            interviewer.full_name AS interviewer_name,
-            interviewer.email     AS interviewer_email,
-            interviewee.id   AS interviewee_id,
-            interviewee.full_name AS interviewee_name,
-            interviewee.email     AS interviewee_email
+            interviewer.id           AS interviewer_id,
+            interviewer.full_name    AS interviewer_name,
+            interviewer.email        AS interviewer_email,
+            interviewer.timezone     AS interviewer_timezone,
+            interviewer.bio          AS interviewer_bio,
+            interviewer.cal_com_link AS interviewer_cal_com_link,
+            interviewee.id           AS interviewee_id,
+            interviewee.full_name    AS interviewee_name,
+            interviewee.email        AS interviewee_email,
+            interviewee.timezone     AS interviewee_timezone,
+            interviewee.bio          AS interviewee_bio,
+            interviewee.cal_com_link AS interviewee_cal_com_link
         FROM sessions s
         JOIN users interviewer ON interviewer.id = s.interviewer_id
         JOIN users interviewee ON interviewee.id = s.interviewee_id
         LEFT JOIN interview_types it ON it.id = s.interview_type_id
+        {where_clause}
+        ORDER BY s.scheduled_at ASC
+        """,
+        params,
+    )
+
+    return cur.fetchall()
+
+
+def get_upcoming_sessions(user_id: str):
+    return _session_query(
+        """
         WHERE (s.interviewer_id = %s OR s.interviewee_id = %s)
           AND s.status = 'confirmed'
           AND s.scheduled_at > NOW()
-        ORDER BY s.scheduled_at ASC
         """,
         (user_id, user_id),
     )
 
-    return cur.fetchall()
+
+def get_completed_sessions(user_id: str):
+    return _session_query(
+        """
+        WHERE (s.interviewer_id = %s OR s.interviewee_id = %s)
+          AND s.status = 'completed'
+        """,
+        (user_id, user_id),
+    )
+
+
+def get_session_by_id(user_id: str, session_id: str):
+    rows = _session_query(
+        """
+        WHERE s.id = %s
+          AND (s.interviewer_id = %s OR s.interviewee_id = %s)
+        """,
+        (session_id, user_id, user_id),
+    )
+    return rows[0] if rows else None
 
 
 def _get_user_id_by_email(cur, email: str):

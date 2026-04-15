@@ -4,26 +4,18 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/ui/star-rating";
 import { Textarea } from "@/components/ui/textarea";
-import { currentUser, sessions } from "@/lib/mock-data";
-import {
-  formatDate,
-  formatTime,
-  interviewTypeLabels,
-  difficultyLabels,
-} from "@/lib/utils";
+import { useAuth } from "@/lib/context/auth";
+import { sessionsApi, type ApiSession } from "@/lib/services/sessions";
+import { formatDate, formatTime, interviewTypeLabels } from "@/lib/utils";
 import {
   ArrowLeft,
   Calendar,
   CheckCircle2,
-  Clock,
   ExternalLink,
-  Globe,
-  Send,
-  Star,
   Video,
 } from "lucide-react";
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 
 export default function SessionDetailPage({
   params,
@@ -31,7 +23,10 @@ export default function SessionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const session = sessions.find((s) => s.id === id);
+  const { user } = useAuth();
+  const [session, setSession] = useState<ApiSession | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [rating, setRating] = useState(0);
@@ -42,7 +37,19 @@ export default function SessionDetailPage({
   const [improvements, setImprovements] = useState("");
   const [notes, setNotes] = useState("");
 
-  if (!session) {
+  useEffect(() => {
+    sessionsApi
+      .get(id)
+      .then(setSession)
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return <p className="text-[14px] text-muted-foreground">Loading…</p>;
+  }
+
+  if (notFound || !session) {
     return (
       <div className="text-center py-20">
         <p className="text-[14px] text-muted-foreground mb-4">
@@ -57,9 +64,15 @@ export default function SessionDetailPage({
     );
   }
 
-  const isInterviewer = session.interviewer.id === currentUser.id;
-  const partner = isInterviewer ? session.interviewee : session.interviewer;
-  const scheduled = new Date(session.scheduledAt);
+  const isInterviewer = session.interviewer_id === user?.id;
+  const partnerName = isInterviewer ? session.interviewee_name : session.interviewer_name;
+  const partnerBio = isInterviewer ? session.interviewee_bio : session.interviewer_bio;
+  const partnerTimezone = isInterviewer ? session.interviewee_timezone : session.interviewer_timezone;
+  const partnerCalLink = isInterviewer ? session.interviewee_cal_com_link : session.interviewer_cal_com_link;
+  const scheduled = new Date(session.scheduled_at);
+
+  const canReschedule =
+    Date.now() < new Date(session.scheduled_at).getTime() - 1000 * 60 * 60;
 
   return (
     <div>
@@ -73,18 +86,19 @@ export default function SessionDetailPage({
 
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Avatar name={partner.name} size="lg" />
+        <Avatar name={partnerName} size="lg" />
         <div>
           <h1 className="text-[24px] font-semibold tracking-tight">
-            {interviewTypeLabels[session.interviewType]} with {partner.name}
+            {session.interview_type
+              ? (interviewTypeLabels[session.interview_type] ?? session.interview_type)
+              : "Interview"}{" "}
+            with {partnerName}
           </h1>
           <p className="text-[14px] text-muted-foreground">
-            {formatDate(session.scheduledAt)} at{" "}
+            {formatDate(session.scheduled_at)} at{" "}
             {formatTime(
               `${scheduled.getHours()}:${String(scheduled.getMinutes()).padStart(2, "0")}`,
-            )}{" "}
-            &middot; {session.duration} min &middot;{" "}
-            {difficultyLabels[session.difficulty]}
+            )}
           </p>
         </div>
       </div>
@@ -92,43 +106,46 @@ export default function SessionDetailPage({
       {/* Join banner */}
       {session.status === "confirmed" && (
         <div className="flex gap-3 mb-8">
-          <a
-            href={session.meetingLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 flex items-center justify-between p-4 bg-muted rounded-xl hover:bg-border/60 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Video className="w-5 h-5 text-foreground" />
-              <div>
-                <p className="text-[14px] font-medium">Join meeting</p>
-                <p className="text-[12px] text-muted-foreground">
-                  {session.meetingLink}
-                </p>
-              </div>
-            </div>
-            <ExternalLink className="w-4 h-4 text-muted-foreground" />
-          </a>
-
-          {Date.now() <
-          new Date(session.scheduledAt).getTime() - 1000 * 60 * 60 ? (
+          {session.meeting_link && (
             <a
-              href={partner.schedulingUrl}
+              href={session.meeting_link}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 bg-muted rounded-xl hover:bg-border/60 transition-colors text-[14px] font-medium"
+              className="flex-1 flex items-center justify-between p-4 bg-muted rounded-xl hover:bg-border/60 transition-colors"
             >
-              <Calendar className="w-4 h-4" />
-              Reschedule
+              <div className="flex items-center gap-3">
+                <Video className="w-5 h-5 text-foreground" />
+                <div>
+                  <p className="text-[14px] font-medium">Join meeting</p>
+                  <p className="text-[12px] text-muted-foreground">
+                    {session.meeting_link}
+                  </p>
+                </div>
+              </div>
+              <ExternalLink className="w-4 h-4 text-muted-foreground" />
             </a>
-          ) : (
-            <div
-              title="Cannot reschedule within 1 hour of session"
-              className="flex items-center gap-2 px-4 bg-muted rounded-xl text-[14px] font-medium text-muted-foreground/40 cursor-not-allowed"
-            >
-              <Calendar className="w-4 h-4" />
-              Reschedule
-            </div>
+          )}
+
+          {partnerCalLink && (
+            canReschedule ? (
+              <a
+                href={partnerCalLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 bg-muted rounded-xl hover:bg-border/60 transition-colors text-[14px] font-medium"
+              >
+                <Calendar className="w-4 h-4" />
+                Reschedule
+              </a>
+            ) : (
+              <div
+                title="Cannot reschedule within 1 hour of session"
+                className="flex items-center gap-2 px-4 bg-muted rounded-xl text-[14px] font-medium text-muted-foreground/40 cursor-not-allowed"
+              >
+                <Calendar className="w-4 h-4" />
+                Reschedule
+              </div>
+            )
           )}
         </div>
       )}
@@ -140,9 +157,7 @@ export default function SessionDetailPage({
         </h2>
         <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-[14px]">
           <div>
-            <p className="text-muted-foreground text-[12px] mb-0.5">
-              Your role
-            </p>
+            <p className="text-muted-foreground text-[12px] mb-0.5">Your role</p>
             <p className="font-medium">
               {isInterviewer ? "Interviewer" : "Interviewee"}
             </p>
@@ -152,14 +167,10 @@ export default function SessionDetailPage({
             <p className="font-medium capitalize">{session.status}</p>
           </div>
           <div>
-            <p className="text-muted-foreground text-[12px] mb-0.5">Topics</p>
-            <p className="font-medium">{session.topics.join(", ")}</p>
-          </div>
-          <div>
             <p className="text-muted-foreground text-[12px] mb-0.5">
               Partner timezone
             </p>
-            <p className="font-medium">{partner.timezone}</p>
+            <p className="font-medium">{partnerTimezone}</p>
           </div>
         </div>
       </section>
@@ -170,17 +181,12 @@ export default function SessionDetailPage({
           Partner
         </h2>
         <div className="flex items-start gap-4">
-          <Avatar name={partner.name} size="md" />
+          <Avatar name={partnerName} size="md" />
           <div>
-            <p className="text-[14px] font-medium">{partner.name}</p>
-            <p className="text-[13px] text-muted-foreground mb-1">
-              {partner.completedSessions} sessions &middot;{" "}
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400 inline" />{" "}
-              {partner.rating}
-            </p>
-            {partner.bio && (
-              <p className="text-[13px] text-muted-foreground leading-relaxed">
-                {partner.bio}
+            <p className="text-[14px] font-medium">{partnerName}</p>
+            {partnerBio && (
+              <p className="text-[13px] text-muted-foreground leading-relaxed mt-1">
+                {partnerBio}
               </p>
             )}
           </div>
@@ -203,18 +209,9 @@ export default function SessionDetailPage({
 
             <div className="grid grid-cols-3 gap-3">
               {[
-                {
-                  label: "Communication",
-                  value: session.feedback.communication,
-                },
-                {
-                  label: "Preparedness",
-                  value: session.feedback.preparedness,
-                },
-                {
-                  label: "Technical",
-                  value: session.feedback.technicalSkill,
-                },
+                { label: "Communication", value: session.feedback.communication },
+                { label: "Preparedness", value: session.feedback.preparedness },
+                { label: "Technical", value: session.feedback.technicalSkill },
               ].map((item) => (
                 <div
                   key={item.label}
@@ -270,7 +267,7 @@ export default function SessionDetailPage({
               onClick={() => setShowFeedback(true)}
               className="text-[13px] font-medium text-foreground underline underline-offset-2 decoration-border hover:decoration-foreground cursor-pointer"
             >
-              Leave feedback for {partner.name}
+              Leave feedback for {partnerName}
             </button>
           ) : (
             <div>
