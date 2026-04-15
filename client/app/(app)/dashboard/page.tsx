@@ -1,39 +1,60 @@
 "use client";
 
 import { Avatar } from "@/components/ui/avatar";
-import { currentUser, sessions, users } from "@/lib/mock-data";
+import { useAuth } from "@/lib/context/auth";
+import { get } from "@/lib/services/api";
 import { formatDate, formatTime, interviewTypeLabels } from "@/lib/utils";
 import { ArrowRight, Video } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+
+type ApiSession = {
+  id: string;
+  status: string;
+  scheduled_at: string;
+  meeting_link: string | null;
+  interview_type: string | null;
+  interviewer_id: string;
+  interviewer_name: string;
+  interviewee_id: string;
+  interviewee_name: string;
+};
 
 export default function DashboardPage() {
-  const upcomingSessions = sessions.filter((s) => s.status === "confirmed");
-  const interviewerCount = users.filter(
-    (u) => u.id !== currentUser.id && (u.role === "interviewer" || u.role === "both")
-  ).length;
+  const { user } = useAuth();
+  const [sessions, setSessions] = useState<ApiSession[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    get<ApiSession[]>("/sessions/")
+      .then(setSessions)
+      .catch(() => setSessions([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div>
       <h1 className="text-[28px] font-semibold tracking-tight mb-1">Home</h1>
       <p className="text-[15px] text-muted-foreground mb-10">
-        {upcomingSessions.length > 0
-          ? `${upcomingSessions.length} upcoming session${upcomingSessions.length > 1 ? "s" : ""}`
+        {loading
+          ? "Loading…"
+          : sessions.length > 0
+          ? `${sessions.length} upcoming session${sessions.length > 1 ? "s" : ""}`
           : "No upcoming sessions"}
       </p>
 
       {/* Upcoming sessions */}
-      {upcomingSessions.length > 0 && (
+      {sessions.length > 0 && (
         <section className="mb-12">
           <h2 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-4">
             Upcoming
           </h2>
           <div className="flex flex-col gap-2">
-            {upcomingSessions.map((session) => {
-              const isInterviewer = session.interviewer.id === currentUser.id;
-              const partner = isInterviewer
-                ? session.interviewee
-                : session.interviewer;
-              const scheduled = new Date(session.scheduledAt);
+            {sessions.map((session) => {
+              const isInterviewer = session.interviewer_id === user?.id;
+              const partnerName = isInterviewer
+                ? session.interviewee_name
+                : session.interviewer_name;
 
               return (
                 <Link
@@ -41,29 +62,34 @@ export default function DashboardPage() {
                   href={`/sessions/${session.id}`}
                   className="flex items-center gap-4 p-4 -mx-4 rounded-xl hover:bg-muted/50 transition-colors"
                 >
-                  <Avatar name={partner.name} size="md" />
+                  <Avatar name={partnerName} size="md" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-medium">{partner.name}</p>
+                    <p className="text-[14px] font-medium">{partnerName}</p>
                     <p className="text-[13px] text-muted-foreground">
-                      {interviewTypeLabels[session.interviewType]} &middot;{" "}
-                      {formatDate(session.scheduledAt)} at{" "}
+                      {session.interview_type
+                        ? interviewTypeLabels[session.interview_type] ?? session.interview_type
+                        : "Interview"}{" "}
+                      &middot; {formatDate(session.scheduled_at)} at{" "}
                       {formatTime(
-                        `${scheduled.getHours()}:${String(
-                          scheduled.getMinutes()
-                        ).padStart(2, "0")}`
+                        (() => {
+                          const d = new Date(session.scheduled_at);
+                          return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+                        })()
                       )}
                     </p>
                   </div>
-                  <a
-                    href={session.meetingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-foreground bg-accent rounded-lg hover:bg-accent-hover transition-colors"
-                  >
-                    <Video className="w-3.5 h-3.5" />
-                    Join
-                  </a>
+                  {session.meeting_link && (
+                    <a
+                      href={session.meeting_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-foreground bg-accent rounded-lg hover:bg-accent-hover transition-colors"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      Join
+                    </a>
+                  )}
                 </Link>
               );
             })}
@@ -81,9 +107,7 @@ export default function DashboardPage() {
           className="flex items-center justify-between p-5 rounded-xl border border-border bg-card hover:bg-card-hover transition-colors group"
         >
           <div>
-            <p className="text-[15px] font-semibold mb-1">
-              {interviewerCount} interviewer{interviewerCount !== 1 ? "s" : ""} available
-            </p>
+            <p className="text-[15px] font-semibold mb-1">Find your next partner</p>
             <p className="text-[13px] text-muted-foreground">
               Browse peers, pick a match, and book directly on their calendar.
             </p>

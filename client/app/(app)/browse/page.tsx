@@ -1,44 +1,32 @@
 "use client";
 
 import { Avatar } from "@/components/ui/avatar";
-import { currentUser, users } from "@/lib/mock-data";
+import { profilesApi, type ProfileUser } from "@/lib/services/profiles";
 import { cn, difficultyLabels, interviewTypeLabels } from "@/lib/utils";
-import type { UserRole } from "@/lib/types";
-import { ExternalLink, Search, Star, SlidersHorizontal, X } from "lucide-react";
+import { ExternalLink, Search, SlidersHorizontal, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
-const roleLabels: Record<UserRole, string> = {
-  interviewer: "Interviewer",
-  interviewee: "Interviewee",
-  both: "Both",
-};
-
-const allInterviewTypes = [...new Set(users.flatMap((u) => u.interviewTypes))];
-const allTopics = [...new Set(users.flatMap((u) => u.topics))].sort();
-const allTimezones = [...new Set(users.map((u) => u.timezone))].sort();
 const allExperiences = ["beginner", "intermediate", "advanced"];
 
 interface Filters {
   interviewTypes: string[];
-  topics: string[];
   timezones: string[];
   experiences: string[];
 }
 
 const emptyFilters: Filters = {
   interviewTypes: [],
-  topics: [],
   timezones: [],
   experiences: [],
 };
 
 function buildScheduleUrl(
-  schedulingUrl: string,
+  calComLink: string,
   interviewType: string | null
 ): string {
-  if (!interviewType) return schedulingUrl;
-  const separator = schedulingUrl.includes("?") ? "&" : "?";
-  return `${schedulingUrl}${separator}metadata[interviewType]=${encodeURIComponent(interviewType)}`;
+  if (!interviewType) return calComLink;
+  const separator = calComLink.includes("?") ? "&" : "?";
+  return `${calComLink}${separator}metadata[interviewType]=${encodeURIComponent(interviewType)}`;
 }
 
 function FilterSection({
@@ -80,10 +68,15 @@ function FilterSection({
 }
 
 export default function BrowsePage() {
+  const [users, setUsers] = useState<ProfileUser[]>([]);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    profilesApi.list().then(setUsers).catch(() => setUsers([]));
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -94,6 +87,9 @@ export default function BrowsePage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const allInterviewTypes = [...new Set(users.flatMap((u) => u.interview_types))];
+  const allTimezones = [...new Set(users.map((u) => u.timezone))].sort();
 
   const activeFilterCount = Object.values(filters).reduce(
     (acc, arr) => acc + arr.length,
@@ -110,32 +106,23 @@ export default function BrowsePage() {
   }
 
   const peers = users
-    .filter((u) => u.id !== currentUser.id)
     .filter((u) => {
       if (!search) return true;
       const q = search.toLowerCase();
       return (
-        u.name.toLowerCase().includes(q) ||
-        u.topics.some((t) => t.toLowerCase().includes(q)) ||
-        u.bio?.toLowerCase().includes(q) ||
-        u.interviewTypes.some(
+        u.full_name.toLowerCase().includes(q) ||
+        u.bio.toLowerCase().includes(q) ||
+        u.interview_types.some(
           (t) =>
             t.toLowerCase().includes(q) ||
-            interviewTypeLabels[t].toLowerCase().includes(q)
+            (interviewTypeLabels[t] ?? "").toLowerCase().includes(q)
         )
       );
     })
     .filter(
       (u) =>
         filters.interviewTypes.length === 0 ||
-        filters.interviewTypes.some((t) =>
-          u.interviewTypes.includes(t as never)
-        )
-    )
-    .filter(
-      (u) =>
-        filters.topics.length === 0 ||
-        filters.topics.some((t) => u.topics.includes(t))
+        filters.interviewTypes.some((t) => u.interview_types.includes(t))
     )
     .filter(
       (u) =>
@@ -145,7 +132,7 @@ export default function BrowsePage() {
     .filter(
       (u) =>
         filters.experiences.length === 0 ||
-        filters.experiences.includes(u.experienceLevel)
+        filters.experiences.includes(u.experience)
     );
 
   return (
@@ -205,12 +192,6 @@ export default function BrowsePage() {
               formatLabel={(v) => interviewTypeLabels[v] ?? v}
             />
             <FilterSection
-              label="Topic"
-              options={allTopics}
-              selected={filters.topics}
-              onToggle={(v) => toggleFilter("topics", v)}
-            />
-            <FilterSection
               label="Timezone"
               options={allTimezones}
               selected={filters.timezones}
@@ -233,24 +214,10 @@ export default function BrowsePage() {
         {peers.map((user) => (
           <div key={user.id} className="py-5 first:pt-0 last:pb-0">
             <div className="flex items-start gap-4">
-              <Avatar name={user.name} size="md" />
+              <Avatar name={user.full_name} size="md" />
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <p className="text-[14px] font-medium">{user.name}</p>
-                  <span
-                    className={cn(
-                      "px-2 py-0.5 text-[11px] font-medium rounded-md",
-                      user.role === "interviewer"
-                        ? "bg-success-light text-success"
-                        : user.role === "interviewee"
-                        ? "bg-accent-light text-warning"
-                        : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {roleLabels[user.role]}
-                  </span>
-                </div>
+                <p className="text-[14px] font-medium mb-0.5">{user.full_name}</p>
 
                 {user.bio && (
                   <p className="text-[13px] text-muted-foreground leading-relaxed mb-3 line-clamp-2">
@@ -259,48 +226,28 @@ export default function BrowsePage() {
                 )}
 
                 <div className="flex flex-wrap items-center gap-1.5 text-[12px] mb-3">
-                  {user.interviewTypes.map((t) => (
+                  {user.interview_types.map((t) => (
                     <span
                       key={t}
                       className="px-2 py-0.5 bg-muted rounded-md font-medium text-foreground"
                     >
-                      {interviewTypeLabels[t]}
+                      {interviewTypeLabels[t] ?? t}
                     </span>
                   ))}
                   <span className="px-2 py-0.5 bg-muted rounded-md text-muted-foreground">
-                    {difficultyLabels[user.experienceLevel]}
+                    {difficultyLabels[user.experience] ?? user.experience}
                   </span>
-                  {user.topics.slice(0, 3).map((topic) => (
-                    <span
-                      key={topic}
-                      className="px-2 py-0.5 bg-muted rounded-md text-muted-foreground"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                  {user.topics.length > 3 && (
-                    <span className="text-muted-foreground">
-                      +{user.topics.length - 3}
-                    </span>
-                  )}
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-3 text-[12px] text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      {user.rating}
-                    </span>
-                    <span>{user.completedSessions} sessions</span>
-                    <span>
-                      {user.timezone.split("/")[1]?.replace("_", " ")}
-                    </span>
+                  <span className="text-[12px] text-muted-foreground">
+                    {user.timezone.split("/")[1]?.replace("_", " ") ?? user.timezone}
                   </span>
 
-                  {user.schedulingUrl ? (
+                  {user.cal_com_link ? (
                     <a
                       href={buildScheduleUrl(
-                        user.schedulingUrl,
+                        user.cal_com_link,
                         filters.interviewTypes.length === 1
                           ? filters.interviewTypes[0]
                           : null
