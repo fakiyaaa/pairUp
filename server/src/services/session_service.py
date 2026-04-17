@@ -2,6 +2,7 @@ from src.db import get_db
 
 
 def get_upcoming_sessions(user_id: str):
+    """Return upcoming confirmed sessions for the given user_id."""
     db = get_db()
     cur = db.cursor()
 
@@ -35,18 +36,21 @@ def get_upcoming_sessions(user_id: str):
 
 
 def _get_user_id_by_email(cur, email: str):
+    """Return the user id for the given email using the provided cursor, or None if not found."""
     cur.execute("SELECT id FROM users WHERE email = %s", (email,))
     row = cur.fetchone()
     return row["id"] if row else None
 
 
 def _get_interview_type_id(cur, name: str):
+    """Return the interview type id for the given name using the provided cursor, or None if not found."""
     cur.execute("SELECT id FROM interview_types WHERE name = %s", (name,))
     row = cur.fetchone()
     return row["id"] if row else None
 
 
 def create_session(payload: dict):
+    """Insert a confirmed session from the webhook payload and commit the transaction."""
     db = get_db()
     cur = db.cursor()
 
@@ -80,6 +84,7 @@ def create_session(payload: dict):
 
 
 def reschedule_session(payload: dict):
+    """Update the scheduled_at time for the session identified by payload uid and commit the transaction."""
     db = get_db()
     cur = db.cursor()
 
@@ -94,6 +99,7 @@ def reschedule_session(payload: dict):
 
 
 def cancel_session(payload: dict):
+    """Mark the session identified by payload uid as cancelled and commit the transaction."""
     db = get_db()
     cur = db.cursor()
 
@@ -104,29 +110,6 @@ def cancel_session(payload: dict):
         (cal_booking_uid,),
     )
     db.commit()
-
-
-def _ensure_feedback_table(cur):
-    """Ensure the feedback table exists for local/dev persistence."""
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS session_feedback (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            session_id TEXT NOT NULL,
-            from_user_id TEXT NOT NULL,
-            from_user_name TEXT,
-            to_user_id TEXT,
-            rating INTEGER NOT NULL,
-            communication INTEGER NOT NULL,
-            preparedness INTEGER NOT NULL,
-            technical_skill INTEGER NOT NULL,
-            strengths TEXT,
-            improvements TEXT,
-            notes TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-        """
-    )
 
 
 def save_feedback(
@@ -145,7 +128,6 @@ def save_feedback(
     """Insert a feedback row and return the created record."""
     db = get_db()
     cur = db.cursor()
-    _ensure_feedback_table(cur)
 
     cur.execute(
         """
@@ -201,7 +183,6 @@ def get_latest_feedback(session_id: str):
     """Fetch the most recently submitted feedback for a session."""
     db = get_db()
     cur = db.cursor()
-    _ensure_feedback_table(cur)
     cur.execute(
         """
         SELECT
