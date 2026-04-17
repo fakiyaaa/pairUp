@@ -67,10 +67,9 @@ def create_feedback(session_id):
         from_user_id (str): ID of the user submitting feedback
         from_user_name (str): Name of the user submitting feedback
         to_user_id (str, optional): ID of the user receiving feedback
-        rating (int): Overall rating
-        communication (int): Communication rating
-        preparedness (int): Preparedness rating
-        technical_skill (int): Technical skill rating
+        communication (int): Communication score (1-5)
+        preparedness (int): Preparedness score (1-5)
+        technical_skill (int): Technical skill score (1-5)
         strengths (str, optional): Noted strengths
         improvements (str, optional): Suggested improvements
         notes (str, optional): Additional notes
@@ -85,7 +84,6 @@ def create_feedback(session_id):
     required_fields = [
         "from_user_id",
         "from_user_name",
-        "rating",
         "communication",
         "preparedness",
         "technical_skill",
@@ -103,7 +101,6 @@ def create_feedback(session_id):
         from_user_id=str(data["from_user_id"]),
         from_user_name=str(data["from_user_name"]),
         to_user_id=str(data.get("to_user_id", "")),
-        rating=int(data["rating"]),
         communication=int(data["communication"]),
         preparedness=int(data["preparedness"]),
         technical_skill=int(data["technical_skill"]),

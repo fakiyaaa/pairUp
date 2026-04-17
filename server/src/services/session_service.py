@@ -117,7 +117,6 @@ def save_feedback(
     from_user_id: str,
     from_user_name: str,
     to_user_id: str,
-    rating: int,
     communication: int,
     preparedness: int,
     technical_skill: int,
@@ -136,7 +135,6 @@ def save_feedback(
             from_user_id,
             from_user_name,
             to_user_id,
-            rating,
             communication,
             preparedness,
             technical_skill,
@@ -144,14 +142,13 @@ def save_feedback(
             improvements,
             notes
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING
             id,
             session_id,
             from_user_id,
             from_user_name,
             to_user_id,
-            rating,
             communication,
             preparedness,
             technical_skill,
@@ -165,7 +162,6 @@ def save_feedback(
             from_user_id,
             from_user_name,
             to_user_id,
-            rating,
             communication,
             preparedness,
             technical_skill,
@@ -191,7 +187,6 @@ def get_latest_feedback(session_id: str):
             from_user_id,
             from_user_name,
             to_user_id,
-            rating,
             communication,
             preparedness,
             technical_skill,
