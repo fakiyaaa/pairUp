@@ -15,7 +15,6 @@ export interface User {
   topics: string[];
   experienceLevel: Difficulty;
   completedSessions: number;
-  rating: number;
   joinedAt: string;
   schedulingUrl?: string;
 }
@@ -39,7 +38,6 @@ export interface Feedback {
   sessionId: string;
   fromUser: User;
   toUser: User;
-  rating: number;
   communication: number;
   preparedness: number;
   technicalSkill: number;

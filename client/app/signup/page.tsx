@@ -209,7 +209,7 @@ export default function SignupPage() {
         {step === 2 && (
           <>
             <h1 className="text-[28px] font-bold tracking-tight mb-2">
-              What's your role?
+              What&apos;s your role?
             </h1>
             <p className="text-[14px] text-muted-foreground mb-8">
               You can change this any time in your profile

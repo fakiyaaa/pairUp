@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS session_feedback (
     from_user_id TEXT NOT NULL,
     from_user_name TEXT,
     to_user_id TEXT,
-    rating INTEGER NOT NULL,
     communication INTEGER NOT NULL,
     preparedness INTEGER NOT NULL,
     technical_skill INTEGER NOT NULL,

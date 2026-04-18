@@ -4,7 +4,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { currentUser, sessions } from "@/lib/mock-data";
 import { cn, formatDate, formatTime, interviewTypeLabels } from "@/lib/utils";
-import { Calendar, CheckCircle2, Clock, Star, Video } from "lucide-react";
+import { Video } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -12,6 +12,7 @@ const tabs = ["Upcoming", "Completed"];
 
 export default function SessionsPage() {
   const [active, setActive] = useState("Upcoming");
+  const [now] = useState(() => Date.now());
 
   const upcoming = sessions.filter((s) => s.status === "confirmed");
   const completed = sessions.filter((s) => s.status === "completed");
@@ -19,7 +20,7 @@ export default function SessionsPage() {
 
   const canReschedule = (scheduledAt: string) => {
     const oneHour = 1000 * 60 * 60;
-    return new Date(scheduledAt).getTime() - Date.now() > oneHour;
+    return new Date(scheduledAt).getTime() - now > oneHour;
   };
 
   return (
@@ -116,9 +117,8 @@ export default function SessionsPage() {
                   </div>
                 )}
                 {session.status === "completed" && session.feedback && (
-                  <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    {session.feedback.rating}
+                  <span className="text-[12px] text-muted-foreground">
+                    Feedback available
                   </span>
                 )}
               </Link>

@@ -5,7 +5,6 @@ type SessionFeedbackPayload = {
   from_user_id: string;
   from_user_name: string;
   to_user_id?: string;
-  rating: number;
   communication: number;
   preparedness: number;
   technical_skill: number;
@@ -20,7 +19,6 @@ export type PersistedFeedback = {
   from_user_id: string;
   from_user_name: string;
   to_user_id?: string;
-  rating: number;
   communication: number;
   preparedness: number;
   technical_skill: number;

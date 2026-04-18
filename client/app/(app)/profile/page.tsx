@@ -4,7 +4,6 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { StarRating } from "@/components/ui/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { currentUser, sessions } from "@/lib/mock-data";
 import {
@@ -17,7 +16,6 @@ import type { Difficulty } from "@/lib/types";
 import {
   ExternalLink,
   Link2,
-  Star,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -145,10 +143,6 @@ export default function ProfilePage() {
               <div className="flex items-center gap-4 mt-3 text-[13px] text-muted-foreground">
                 <span>
                   {currentUser.completedSessions} sessions
-                </span>
-                <span className="flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                  {currentUser.rating}
                 </span>
                 <span>
                   Joined {formatDate(currentUser.joinedAt)}
@@ -292,9 +286,8 @@ export default function ProfilePage() {
                     </p>
                   </div>
                   {session.feedback && (
-                    <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      {session.feedback.rating}
+                    <span className="text-[12px] text-muted-foreground">
+                      Feedback available
                     </span>
                   )}
                 </Link>

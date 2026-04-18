@@ -92,7 +92,7 @@ Output, hard filter on required scopes, score based on others
 - Interviewee submits: type, topics, duration
 - Interviewers: yes/no
 - Confirmed session appears in the dashboard.
-- Post-session: Structured rating form, written notes
+- Post-session: Structured feedback form, written notes
   - all stored in user’s history
 
 ## Success Metrics
