@@ -37,6 +37,8 @@ export const authApi = {
     role: UserRole;
     experience?: string;
     cal_com_link?: string;
+    interview_types?: string[];
+    topic_ids?: string[];
   }) => post<{ user: AuthUser }>("/auth/signup", payload),
 
   logout: () => post<{ message: string }>("/auth/logout"),

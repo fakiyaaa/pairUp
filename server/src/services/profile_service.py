@@ -106,7 +106,9 @@ def get_me(user_id):
         """,
         (user_id,),
     )
-    profile["topics"] = [{"id": r["id"], "name": r["name"]} for r in cur.fetchall()]
+    profile["topics"] = [
+        {"id": r["id"], "name": r["name"]} for r in cur.fetchall()
+    ]
 
     cur.execute(
         """
@@ -116,7 +118,9 @@ def get_me(user_id):
             s.scheduled_at,
             s.meeting_link,
             it.name AS interview_type,
-            CASE WHEN s.interviewer_id = %s THEN ie.full_name ELSE ir.full_name END AS partner_name
+            CASE WHEN s.interviewer_id = %s
+                THEN ie.full_name ELSE ir.full_name
+            END AS partner_name
         FROM sessions s
         JOIN interview_types it ON it.id = s.interview_type_id
         JOIN users ir ON ir.id = s.interviewer_id
@@ -137,7 +141,10 @@ def update_me(user_id, data):
     db = get_db()
     cur = db.cursor()
 
-    allowed = ("full_name", "bio", "timezone", "experience", "cal_com_link")
+    allowed = (
+        "full_name", "bio", "timezone", "experience",
+        "cal_com_link", "target_role",
+    )
     fields = {col: data[col] for col in allowed if col in data}
 
     if "role" in data:
@@ -154,18 +161,30 @@ def update_me(user_id, data):
         )
 
     if "interview_types" in data:
-        cur.execute("DELETE FROM user_interview_types WHERE user_id = %s", (user_id,))
+        cur.execute(
+            "DELETE FROM user_interview_types WHERE user_id = %s", (user_id,)
+        )
         for name in data["interview_types"]:
             cur.execute(
-                "INSERT INTO user_interview_types (user_id, interview_type_id) SELECT %s, id FROM interview_types WHERE name = %s ON CONFLICT DO NOTHING",
+                """
+                INSERT INTO user_interview_types (user_id, interview_type_id)
+                SELECT %s, id FROM interview_types WHERE name = %s
+                ON CONFLICT DO NOTHING
+                """,
                 (user_id, name),
             )
 
     if "topic_ids" in data:
-        cur.execute("DELETE FROM user_topics WHERE user_id = %s", (user_id,))
+        cur.execute(
+            "DELETE FROM user_topics WHERE user_id = %s", (user_id,)
+        )
         for topic_id in data["topic_ids"]:
             cur.execute(
-                "INSERT INTO user_topics (user_id, topic_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                """
+                INSERT INTO user_topics (user_id, topic_id)
+                VALUES (%s, %s)
+                ON CONFLICT DO NOTHING
+                """,
                 (user_id, topic_id),
             )
 

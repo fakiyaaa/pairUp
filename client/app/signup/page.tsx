@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { authApi } from "@/lib/services/auth";
-import { profileApi, type Role } from "@/lib/services/profile";
+import { profileApi, type Role, type InterviewType, type Topic } from "@/lib/services/profile";
 
 const roleDisplay: Record<UserRole, { label: string; description: string }> = {
   interviewee: {
@@ -40,35 +40,6 @@ const timezones = [
   { value: "America/Sao_Paulo", label: "Sao Paulo (BRT)" },
 ];
 
-const interviewTypes = [
-  { id: "technical", label: "Technical" },
-  { id: "behavioral", label: "Behavioral" },
-  { id: "case", label: "Case Study" },
-  { id: "product", label: "Product" },
-];
-
-const topicOptions = [
-  "Data Structures",
-  "Algorithms",
-  "System Design",
-  "Dynamic Programming",
-  "Machine Learning",
-  "Product Sense",
-  "Metrics",
-  "Strategy",
-  "Market Sizing",
-  "Profitability",
-  "Go-to-Market",
-  "Leadership",
-  "Conflict Resolution",
-  "React",
-  "Node.js",
-  "API Design",
-  "Python",
-  "SQL",
-  "Statistics",
-  "Brain Teasers",
-];
 
 export default function SignupPage() {
   const router = useRouter();
@@ -90,8 +61,10 @@ export default function SignupPage() {
   const [role, setRole] = useState<UserRole | "">("");
 
   // Step 3
+  const [allInterviewTypes, setAllInterviewTypes] = useState<InterviewType[]>([]);
+  const [allTopics, setAllTopics] = useState<Topic[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [experience, setExperience] = useState("");
 
   // Step 4
@@ -99,14 +72,23 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    Promise.all([profileApi.getInterviewTypes(), profileApi.getTopics()])
+      .then(([types, topics]) => {
+        setAllInterviewTypes(types);
+        setAllTopics(topics);
+      })
+      .catch(() => {});
+  }, []);
+
   const toggleType = (id: string) =>
     setSelectedTypes((prev) =>
       prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
     );
 
-  const toggleTopic = (topic: string) =>
-    setSelectedTopics((prev) =>
-      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
+  const toggleTopic = (id: string) =>
+    setSelectedTopicIds((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
     );
 
   async function handleSignup(withSchedulingUrl: boolean) {
@@ -124,6 +106,8 @@ export default function SignupPage() {
         role,
         experience: experience || undefined,
         cal_com_link: withSchedulingUrl && schedulingUrl ? schedulingUrl : undefined,
+        interview_types: selectedTypes.length > 0 ? selectedTypes : undefined,
+        topic_ids: selectedTopicIds.length > 0 ? selectedTopicIds : undefined,
       });
       router.push("/dashboard");
     } catch (err) {
@@ -287,19 +271,19 @@ export default function SignupPage() {
                 <label className="text-[13px] font-medium text-foreground mb-3 block">
                   Interview types
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {interviewTypes.map((type) => (
+                <div className="flex flex-wrap gap-2">
+                  {allInterviewTypes.map((type) => (
                     <button
                       key={type.id}
-                      onClick={() => toggleType(type.id)}
+                      onClick={() => toggleType(type.name)}
                       className={cn(
-                        "px-4 py-3 text-[14px] font-medium rounded-xl border transition-all cursor-pointer",
-                        selectedTypes.includes(type.id)
+                        "px-3 py-1.5 text-[13px] font-medium rounded-lg border transition-all cursor-pointer",
+                        selectedTypes.includes(type.name)
                           ? "border-foreground bg-foreground text-background"
-                          : "border-border bg-card text-foreground hover:border-foreground/30"
+                          : "border-border text-muted-foreground hover:border-foreground/30"
                       )}
                     >
-                      {type.label}
+                      {type.name}
                     </button>
                   ))}
                 </div>
@@ -323,18 +307,18 @@ export default function SignupPage() {
                   Topics
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {topicOptions.map((topic) => (
+                  {allTopics.map((topic) => (
                     <button
-                      key={topic}
-                      onClick={() => toggleTopic(topic)}
+                      key={topic.id}
+                      onClick={() => toggleTopic(topic.id)}
                       className={cn(
                         "px-3 py-1.5 text-[13px] font-medium rounded-lg border transition-all cursor-pointer",
-                        selectedTopics.includes(topic)
+                        selectedTopicIds.includes(topic.id)
                           ? "border-foreground bg-foreground text-background"
-                          : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                          : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                       )}
                     >
-                      {topic}
+                      {topic.name}
                     </button>
                   ))}
                 </div>

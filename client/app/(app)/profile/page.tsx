@@ -48,6 +48,7 @@ export default function ProfilePage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [experience, setExperience] = useState<Difficulty>("intermediate");
+  const [targetRole, setTargetRole] = useState("");
   const [schedulingUrl, setSchedulingUrl] = useState("");
   const [selectedRole, setSelectedRole] = useState<UserRole>("both");
 
@@ -64,6 +65,7 @@ export default function ProfilePage() {
         setSelectedTypes(data.interview_types ?? []);
         setSelectedTopicIds((data.topics ?? []).map((t) => t.id));
         setExperience((data.experience as Difficulty) ?? "intermediate");
+        setTargetRole(data.target_role ?? "");
         setSchedulingUrl(data.cal_com_link ?? "");
         setSelectedRole(data.role ?? "both");
       })
@@ -79,9 +81,16 @@ export default function ProfilePage() {
     setSelectedTypes(profile.interview_types ?? []);
     setSelectedTopicIds((profile.topics ?? []).map((t) => t.id));
     setExperience((profile.experience as Difficulty) ?? "intermediate");
+    setTargetRole(profile.target_role ?? "");
     setSchedulingUrl(profile.cal_com_link ?? "");
     setSelectedRole(profile.role ?? "both");
     setEditing(true);
+  }
+
+  async function handleTargetRoleSave() {
+    if (!profile || targetRole === profile.target_role) return;
+    const updated = await profileApi.updateMe({ target_role: targetRole });
+    setProfile(updated);
   }
 
   async function handleSave() {
@@ -284,7 +293,7 @@ export default function ProfilePage() {
             {profile.role && (
               <div>
                 <p className="text-[12px] text-muted-foreground mb-1.5">Role</p>
-                <p className="text-[14px] font-medium">{roleDisplay[profile.role]}</p>
+                <p className="text-[14px] font-medium capitalize">{profile.role}</p>
               </div>
             )}
             {profile.interview_types.length > 0 && (
@@ -331,6 +340,24 @@ export default function ProfilePage() {
             )}
           </div>
         )}
+      </section>
+
+      {/* Relevant opportunities */}
+      <section className="mb-10">
+        <h2 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+          Relevant opportunities
+        </h2>
+        <p className="text-[12px] text-muted-foreground mb-3">
+          A role you're targeting or relevant experience — e.g. Meta SWE intern, ex-Google PM
+        </p>
+        <input
+          type="text"
+          placeholder="e.g. Meta SWE internship"
+          value={targetRole}
+          onChange={(e) => setTargetRole(e.target.value)}
+          onBlur={handleTargetRoleSave}
+          className="w-full px-3 py-2.5 text-[14px] bg-card border border-border rounded-xl placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+        />
       </section>
 
       {/* Upcoming sessions */}

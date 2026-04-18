@@ -36,6 +36,7 @@ export type ProfileData = {
   bio: string;
   cal_com_link: string;
   role: UserRole;
+  target_role: string;
   interview_types: string[];
   topics: Topic[];
   upcoming_sessions: UpcomingSession[];
