@@ -45,10 +45,13 @@ def signup_route():
     email = data.get("email")
     password = data.get("password")
     timezone = data.get("timezone")
+    role = data.get("role")
 
-    if not all([full_name, email, password, timezone]):
+    if not all([full_name, email, password, timezone, role]):
         return (
-            jsonify({"error": "full_name, email, password, and timezone are required"}),
+            jsonify(
+                {"error": "full_name, email, password, timezone, and role are required"}
+            ),
             400,
         )
 
@@ -57,16 +60,21 @@ def signup_route():
         email=email,
         password=password,
         timezone=timezone,
+        role=role,
         experience=data.get("experience"),
         bio=data.get("bio"),
         cal_com_link=data.get("cal_com_link"),
+        interview_types=data.get("interview_types"),
+        topic_ids=data.get("topic_ids"),
     )
 
     if error:
         return jsonify({"error": error}), 400
 
     response = make_response(jsonify({"user": result["user"]}))
-    _set_auth_cookies(response, result["access_token"], result["refresh_token"])
+    _set_auth_cookies(
+        response, result["access_token"], result["refresh_token"]
+    )
     return response
 
 
@@ -85,7 +93,9 @@ def login_route():
         return jsonify({"error": error}), 401
 
     response = make_response(jsonify({"user": result["user"]}))
-    _set_auth_cookies(response, result["access_token"], result["refresh_token"])
+    _set_auth_cookies(
+        response, result["access_token"], result["refresh_token"]
+    )
     return response
 
 
@@ -114,7 +124,9 @@ def refresh_route():
         return jsonify({"error": error}), 401
 
     response = make_response(jsonify({"message": "Tokens refreshed"}))
-    _set_auth_cookies(response, result["access_token"], result["refresh_token"])
+    _set_auth_cookies(
+        response, result["access_token"], result["refresh_token"]
+    )
     return response
 
 

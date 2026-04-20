@@ -1,7 +1,6 @@
 import type {
   User,
   Session,
-  Notification,
 } from "./types";
 
 export const currentUser: User = {
@@ -154,35 +153,5 @@ export const sessions: Session[] = [
     scheduledAt: "2026-02-15T11:00:00Z",
     meetingLink: "https://meet.google.com/efg-hijk-lmn",
     status: "completed",
-  },
-];
-
-export const notifications: Notification[] = [
-  {
-    id: "n2",
-    type: "session_reminder",
-    title: "Session tomorrow",
-    message: "Product Sense mock with Priya Sharma at 10:00 AM",
-    read: false,
-    createdAt: "2026-02-22T08:00:00Z",
-    actionUrl: "/sessions/ses1",
-  },
-  {
-    id: "n3",
-    type: "feedback_received",
-    title: "Feedback received",
-    message: "Daniel Kim left feedback on your session",
-    read: true,
-    createdAt: "2026-02-18T16:15:00Z",
-    actionUrl: "/sessions/ses3",
-  },
-  {
-    id: "n4",
-    type: "match_accepted",
-    title: "Match confirmed",
-    message: "Your session with Priya Sharma is confirmed",
-    read: true,
-    createdAt: "2026-02-20T14:00:00Z",
-    actionUrl: "/sessions/ses1",
   },
 ];

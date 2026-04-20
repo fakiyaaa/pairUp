@@ -3,10 +3,9 @@
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/context/auth";
 import { cn } from "@/lib/utils";
-import { Bell } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Home" },
@@ -18,7 +17,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [showNotifs, setShowNotifs] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -61,32 +59,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <button
-                onClick={() => setShowNotifs(!showNotifs)}
-                className="relative p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer"
-              >
-                <Bell className="w-4 h-4 text-muted-foreground" />
-              </button>
-
-              {showNotifs && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowNotifs(false)}
-                  />
-                  <div className="absolute right-0 top-10 w-72 bg-card rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.04)] z-50 overflow-hidden">
-                    <div className="px-4 py-2.5 border-b border-border">
-                      <p className="text-[13px] font-semibold">Notifications</p>
-                    </div>
-                    <div className="px-4 py-4 text-[13px] text-muted-foreground">
-                      No notifications yet
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
             <Link
               href="/profile"
               className="p-1 rounded-lg hover:bg-muted transition-colors"

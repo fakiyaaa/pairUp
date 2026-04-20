@@ -47,12 +47,3 @@ export interface Feedback {
   createdAt: string;
 }
 
-export interface Notification {
-  id: string;
-  type: "match_request" | "match_accepted" | "session_reminder" | "feedback_received" | "session_cancelled";
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
-  actionUrl?: string;
-}

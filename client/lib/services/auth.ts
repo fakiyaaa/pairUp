@@ -5,6 +5,7 @@ export type AuthUser = {
   full_name: string;
   email: string;
   timezone: string;
+  role: UserRole;
   experience?: string;
   bio?: string;
   cal_com_link?: string;
@@ -30,8 +31,11 @@ export const authApi = {
     email: string;
     password: string;
     timezone: string;
+    role: UserRole;
     experience?: string;
     cal_com_link?: string;
+    interview_types?: string[];
+    topic_ids?: string[];
   }) => post<{ user: AuthUser }>("/auth/signup", payload),
 
   /**
