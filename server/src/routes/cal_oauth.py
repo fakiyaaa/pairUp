@@ -1,9 +1,9 @@
-from flask import Blueprint, jsonify, redirect, request, g, current_app
+from flask import Blueprint, jsonify, request, g, current_app
 
 from src.middleware.auth import require_auth
 from src.services.cal_service import (
     exchange_code_for_tokens,
-    get_cal_username,
+    get_user_info,
     get_oauth_authorize_url,
     register_webhook,
     save_cal_connection,
@@ -32,19 +32,20 @@ def exchange():
     except Exception:
         return jsonify({"error": "Failed to exchange code — invalid or expired"}), 400
 
-    access_token = tokens.get("accessToken") or tokens.get("access_token", "")
-    refresh_token = tokens.get("refreshToken") or tokens.get("refresh_token", "")
+    access_token = tokens.get("access_token", "")
+    refresh_token = tokens.get("refresh_token", "")
 
     try:
-        username = get_cal_username(access_token)
+        user_info = get_user_info(access_token)
+        scheduling_url = user_info.get("scheduling_url", "")
+        user_uri = user_info.get("uri", "")
+        organization_uri = user_info.get("current_organization", "")
     except Exception:
-        return jsonify({"error": "Could not fetch Cal.com username"}), 400
-
-    cal_com_link = f"https://cal.com/{username}" if username else ""
+        return jsonify({"error": "Could not fetch Calendly user info"}), 400
 
     webhook_id = None
     try:
-        webhook_id = register_webhook(access_token)
+        webhook_id = register_webhook(access_token, user_uri, organization_uri)
     except Exception as e:
         current_app.logger.warning(f"Webhook registration skipped: {e}")
 
@@ -53,7 +54,7 @@ def exchange():
         access_token=access_token,
         refresh_token=refresh_token,
         webhook_id=str(webhook_id) if webhook_id else "",
-        cal_com_link=cal_com_link,
+        cal_com_link=scheduling_url or "",
     )
 
-    return jsonify({"cal_com_link": cal_com_link})
+    return jsonify({"cal_com_link": scheduling_url or ""})

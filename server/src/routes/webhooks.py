@@ -19,24 +19,25 @@ def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
-@webhooks_bp.route("/cal", methods=["POST"])
-def cal_webhook():
-    secret = current_app.config.get("CAL_WEBHOOK_SECRET", "")
+@webhooks_bp.route("/calendly", methods=["POST"])
+def calendly_webhook():
+    secret = current_app.config.get("CALENDLY_WEBHOOK_SECRET", "")
 
     if secret:
-        signature = request.headers.get("X-Cal-Signature-256", "")
+        signature = request.headers.get("Calendly-Webhook-Signature", "")
         if not verify_signature(request.data, signature, secret):
             return {"error": "Invalid signature"}, 401
 
     data = request.get_json()
-    event = data.get("triggerEvent")
+    event = data.get("event")
     payload = data.get("payload", {})
 
-    if event == "BOOKING_CREATED":
-        create_session(payload)
-    elif event == "BOOKING_RESCHEDULED":
-        reschedule_session(payload)
-    elif event == "BOOKING_CANCELLED":
+    if event == "invitee.created":
+        if payload.get("invitee", {}).get("is_reschedule"):
+            reschedule_session(payload)
+        else:
+            create_session(payload)
+    elif event == "invitee.canceled":
         cancel_session(payload)
 
     return {"status": "ok"}, 200

@@ -32,7 +32,7 @@ function CalCallback() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <p className="text-[14px] text-muted-foreground">Connecting Cal.com…</p>
+      <p className="text-[14px] text-muted-foreground">Connecting Calendly…</p>
     </div>
   );
 }
@@ -41,7 +41,7 @@ export default function CalCallbackPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-[14px] text-muted-foreground">Connecting Cal.com…</p>
+        <p className="text-[14px] text-muted-foreground">Connecting Calendly…</p>
       </div>
     }>
       <CalCallback />
