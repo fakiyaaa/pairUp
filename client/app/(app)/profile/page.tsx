@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { profileApi, type ProfileData, type Topic, type InterviewType, type Role } from "@/lib/services/profile";
 import { authApi } from "@/lib/services/auth";
-import { cn, difficultyLabels, formatDate, interviewTypeLabels } from "@/lib/utils";
+import { profileApi, type InterviewType, type ProfileData, type Role, type Topic } from "@/lib/services/profile";
 import type { Difficulty, UserRole } from "@/lib/types";
+import { cn, difficultyLabels, formatDate, interviewTypeLabels } from "@/lib/utils";
 import { ExternalLink, Link2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -367,32 +367,32 @@ export default function ProfilePage() {
             Upcoming sessions
           </h2>
           <div className="flex flex-col divide-y divide-border">
-{profile.upcoming_sessions.map((session) => (
-  <Link
-    key={session.id}
-    href={`/sessions/${session.id}`}
-    className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:opacity-80 transition-opacity"
-  >
-    <Avatar name={session.partner_name} size="sm" />
-    <div className="flex-1 min-w-0">
-      <p className="text-[13px] font-medium">{session.partner_name}</p>
-      <p className="text-[12px] text-muted-foreground">
-        {interviewTypeLabels[session.interview_type] ?? session.interview_type}{" "}
-        &middot; {formatDate(session.scheduled_at)}
-      </p>
-    </div>
-  {session.meeting_link && (
-
-      href={session.meeting_link}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-[12px] text-muted-foreground hover:text-foreground"
-    >
-      <ExternalLink className="w-3.5 h-3.5" />
-    </a>
-  )}
-  </Link>
-))}
+            {profile.upcoming_sessions.map((session) => (
+              <Link
+                key={session.id}
+                href={`/sessions/${session.id}`}
+                className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:opacity-80 transition-opacity"
+              >
+                <Avatar name={session.partner_name} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium">{session.partner_name}</p>
+                  <p className="text-[12px] text-muted-foreground">
+                    {interviewTypeLabels[session.interview_type] ?? session.interview_type}{" "}
+                    &middot; {formatDate(session.scheduled_at)}
+                  </p>
+                </div>
+                {session.meeting_link && (
+                  <a
+                    href={session.meeting_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[12px] text-muted-foreground hover:text-foreground"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </Link>
+            ))}
           </div>
         </section>
       )}
