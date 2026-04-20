@@ -1,6 +1,7 @@
 import secrets
 import requests
 from urllib.parse import urlencode
+from typing import Optional
 from flask import current_app
 from src.db import get_db
 CAL_API_BASE = "https://api.cal.com/v2"
@@ -45,13 +46,13 @@ def exchange_code_for_tokens(code: str) -> dict:
     return resp.json()
 
 
-def get_cal_username(access_token: str) -> str | None:
+def get_cal_username(access_token: str) -> Optional[str]:
     resp = requests.get(f"{CAL_API_BASE}/me", headers=_cal_headers(access_token))
     resp.raise_for_status()
     return resp.json().get("data", {}).get("username")
 
 
-def register_webhook(access_token: str) -> str | None:
+def register_webhook(access_token: str) -> Optional[str]:
     webhook_url = current_app.config["CAL_WEBHOOK_URL"]
     resp = requests.post(
         f"{CAL_API_BASE}/webhooks",
