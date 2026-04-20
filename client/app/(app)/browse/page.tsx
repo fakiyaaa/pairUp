@@ -26,8 +26,10 @@ function buildScheduleUrl(
   intervieweeCalLink: string | undefined,
   interviewType: string | null
 ): string {
+  if (!interviewerCalLink.includes("cal.com")) return interviewerCalLink;
   const interviewerUsername = interviewerCalLink.replace(/^https?:\/\/cal\.com\//, "");
-  const intervieweeUsername = intervieweeCalLink?.replace(/^https?:\/\/cal\.com\//, "");
+  const rawInterviewee = intervieweeCalLink?.includes("cal.com") ? intervieweeCalLink : undefined;
+  const intervieweeUsername = rawInterviewee?.replace(/^https?:\/\/cal\.com\//, "");
 
   const base =
     intervieweeUsername
