@@ -9,18 +9,15 @@ export type ApiSession = {
   interviewer_id: string;
   interviewer_name: string;
   interviewer_email: string;
+  interviewer_timezone: string;
+  interviewer_bio: string | null;
   interviewer_cal_com_link: string | null;
   interviewee_id: string;
   interviewee_name: string;
   interviewee_email: string;
-  interviewee_cal_com_link: string | null;
-};
-
-export type ApiSessionDetail = ApiSession & {
-  interviewer_bio: string | null;
-  interviewer_timezone: string | null;
+  interviewee_timezone: string;
   interviewee_bio: string | null;
-  interviewee_timezone: string | null;
+  interviewee_cal_com_link: string | null;
 };
 
 export type PersistedFeedback = {
@@ -39,7 +36,7 @@ export type PersistedFeedback = {
   created_at: string;
 };
 
-type SessionFeedbackPayload = {
+export type SessionFeedbackPayload = {
   from_user_id: string;
   from_user_name: string;
   to_user_id?: string;
@@ -57,7 +54,7 @@ export const sessionsApi = {
 
   listCompleted: () => get<ApiSession[]>("/sessions/completed"),
 
-  getById: (id: string) => get<ApiSessionDetail>(`/sessions/${id}`),
+  get: (id: string) => get<ApiSession>(`/sessions/${id}`),
 
   getFeedback: (sessionId: string) =>
     get<{ feedback: PersistedFeedback | null }>(`/sessions/${sessionId}/feedback`),

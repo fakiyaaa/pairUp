@@ -6,6 +6,7 @@ import { get } from "@/lib/services/api";
 import { formatDate, formatTime, interviewTypeLabels } from "@/lib/utils";
 import { ArrowRight, Video } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type ApiSession = {
@@ -22,6 +23,7 @@ type ApiSession = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [sessions, setSessions] = useState<ApiSession[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,20 +53,36 @@ export default function DashboardPage() {
           </h2>
           <div className="flex flex-col gap-2">
             {sessions.map((session) => {
+              if (!session.interviewer_id || !session.interviewee_id) return null;
               const isInterviewer = session.interviewer_id === user?.id;
               const partnerName = isInterviewer
                 ? session.interviewee_name
                 : session.interviewer_name;
+              const partnerId = isInterviewer
+                ? session.interviewee_id
+                : session.interviewer_id;
 
               return (
-                <Link
+                <div
                   key={session.id}
-                  href={`/sessions/${session.id}`}
-                  className="flex items-center gap-4 p-4 -mx-4 rounded-xl hover:bg-muted/50 transition-colors"
+                  onClick={() => router.push(`/sessions/${session.id}`)}
+                  className="flex items-center gap-4 p-4 -mx-4 rounded-xl hover:bg-muted/50 transition-colors cursor-pointer"
                 >
-                  <Avatar name={partnerName} size="md" />
+                  <Link
+                    href={`/profile/${partnerId}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0"
+                  >
+                    <Avatar name={partnerName} size="md" />
+                  </Link>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-medium">{partnerName}</p>
+                    <Link
+                      href={`/profile/${partnerId}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:underline underline-offset-2"
+                    >
+                      <p className="text-[14px] font-medium">{partnerName}</p>
+                    </Link>
                     <p className="text-[13px] text-muted-foreground">
                       {session.interview_type
                         ? interviewTypeLabels[session.interview_type] ?? session.interview_type
@@ -90,7 +108,7 @@ export default function DashboardPage() {
                       Join
                     </a>
                   )}
-                </Link>
+                </div>
               );
             })}
           </div>

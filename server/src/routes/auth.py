@@ -18,7 +18,7 @@ def _set_auth_cookies(response, access_token, refresh_token):
         access_token,
         httponly=True,
         secure=secure,
-        samesite="Lax",
+        samesite="None",
         path="/",
         max_age=current_app.config["JWT_ACCESS_TOKEN_EXPIRES"],
     )
@@ -27,7 +27,7 @@ def _set_auth_cookies(response, access_token, refresh_token):
         refresh_token,
         httponly=True,
         secure=secure,
-        samesite="Lax",
+        samesite="None",
         path="/",
         max_age=current_app.config["JWT_REFRESH_TOKEN_EXPIRES"],
     )

@@ -5,6 +5,7 @@ import { profilesApi, type ProfileUser } from "@/lib/services/profiles";
 import { useAuth } from "@/lib/context/auth";
 import { cn, difficultyLabels, interviewTypeLabels } from "@/lib/utils";
 import { ExternalLink, Search, SlidersHorizontal, X } from "lucide-react";
+import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 
 const allExperiences = ["beginner", "intermediate", "advanced"];
@@ -227,10 +228,14 @@ export default function BrowsePage() {
         {peers.map((user) => (
           <div key={user.id} className="py-5 first:pt-0 last:pb-0">
             <div className="flex items-start gap-4">
-              <Avatar name={user.full_name} size="md" />
+              <Link href={`/profile/${user.id}`} className="shrink-0">
+                <Avatar name={user.full_name} size="md" />
+              </Link>
 
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-medium mb-0.5">{user.full_name}</p>
+                <Link href={`/profile/${user.id}`} className="hover:underline underline-offset-2">
+                  <p className="text-[14px] font-medium mb-0.5">{user.full_name}</p>
+                </Link>
 
                 {user.bio && (
                   <p className="text-[13px] text-muted-foreground leading-relaxed mb-3 line-clamp-2">

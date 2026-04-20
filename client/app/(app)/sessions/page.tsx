@@ -96,6 +96,7 @@ export default function SessionsPage() {
       ) : (
         <div className="flex flex-col divide-y divide-border">
           {list.map((session) => {
+            if (!session.interviewer_id || !session.interviewee_id) return null;
             const isInterviewer = session.interviewer_id === user?.id;
             const partnerName = isInterviewer
               ? session.interviewee_name
@@ -116,8 +117,7 @@ export default function SessionsPage() {
                   <p className="text-[14px] font-medium">{partnerName}</p>
                   <p className="text-[13px] text-muted-foreground">
                     {session.interview_type
-                      ? (interviewTypeLabels[session.interview_type] ??
-                        session.interview_type)
+                      ? (interviewTypeLabels[session.interview_type] ?? session.interview_type)
                       : "Interview"}{" "}
                     &middot; {formatDate(session.scheduled_at)} at{" "}
                     {formatTime(
@@ -126,26 +126,27 @@ export default function SessionsPage() {
                   </p>
                 </div>
                 {session.status === "confirmed" && (
-                  <div className="flex items-center gap-2">
+                  <div
+                    className="flex items-center gap-2"
+                    onClick={(e) => e.preventDefault()}
+                  >
                     {session.meeting_link && (
                       <a
                         href={session.meeting_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
                         className="text-[12px] font-medium text-foreground bg-accent px-2 py-1 rounded-md flex items-center gap-1"
                       >
                         <Video className="w-3.5 h-3.5" />
                         Join
                       </a>
                     )}
-                    {partnerCalComLink ? (
+                    {partnerCalComLink && (
                       canReschedule(session.scheduled_at) ? (
                         <a
                           href={partnerCalComLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
                           className="text-[12px] font-medium text-muted-foreground border border-border px-2 py-1 rounded-md hover:text-foreground transition-colors"
                         >
                           Reschedule
@@ -153,13 +154,12 @@ export default function SessionsPage() {
                       ) : (
                         <span
                           title="Cannot reschedule within 1 hour of session"
-                          onClick={(e) => e.stopPropagation()}
                           className="text-[12px] font-medium text-muted-foreground/40 border border-border px-2 py-1 rounded-md cursor-not-allowed"
                         >
                           Reschedule
                         </span>
                       )
-                    ) : null}
+                    )}
                   </div>
                 )}
                 {session.status === "completed" && (

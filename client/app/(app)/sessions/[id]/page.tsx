@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/context/auth";
 import {
-  type ApiSessionDetail,
+  type ApiSession,
   type PersistedFeedback,
   sessionsApi,
 } from "@/lib/services/sessions";
@@ -63,7 +63,7 @@ export default function SessionDetailPage({
   const { user } = useAuth();
   const router = useRouter();
 
-  const [session, setSession] = useState<ApiSessionDetail | null>(null);
+  const [session, setSession] = useState<ApiSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -85,7 +85,7 @@ export default function SessionDetailPage({
 
   useEffect(() => {
     sessionsApi
-      .getById(id)
+      .get(id)
       .then(setSession)
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -154,7 +154,7 @@ export default function SessionDetailPage({
     );
   }
 
-  if (notFound || !session) {
+  if (notFound || !session || !session.interviewer_id || !session.interviewee_id) {
     return (
       <div className="text-center py-20">
         <p className="text-[14px] text-muted-foreground mb-4">
@@ -349,9 +349,7 @@ export default function SessionDetailPage({
                 <p className="text-[12px] font-medium text-muted-foreground mb-1">
                   Strengths
                 </p>
-                <p className="text-[14px] leading-relaxed">
-                  {feedback.strengths}
-                </p>
+                <p className="text-[14px] leading-relaxed">{feedback.strengths}</p>
               </div>
             )}
             {feedback.improvements && (
@@ -359,9 +357,7 @@ export default function SessionDetailPage({
                 <p className="text-[12px] font-medium text-muted-foreground mb-1">
                   Improvements
                 </p>
-                <p className="text-[14px] leading-relaxed">
-                  {feedback.improvements}
-                </p>
+                <p className="text-[14px] leading-relaxed">{feedback.improvements}</p>
               </div>
             )}
             {feedback.notes && (
@@ -393,26 +389,10 @@ export default function SessionDetailPage({
               </h2>
               <div className="space-y-5">
                 <div className="grid grid-cols-4 gap-4">
-                  <ScoreSelect
-                    label="Overall"
-                    value={rating}
-                    onChange={setRating}
-                  />
-                  <ScoreSelect
-                    label="Communication"
-                    value={communication}
-                    onChange={setCommunication}
-                  />
-                  <ScoreSelect
-                    label="Preparedness"
-                    value={preparedness}
-                    onChange={setPreparedness}
-                  />
-                  <ScoreSelect
-                    label="Technical"
-                    value={technicalSkill}
-                    onChange={setTechnicalSkill}
-                  />
+                  <ScoreSelect label="Overall" value={rating} onChange={setRating} />
+                  <ScoreSelect label="Communication" value={communication} onChange={setCommunication} />
+                  <ScoreSelect label="Preparedness" value={preparedness} onChange={setPreparedness} />
+                  <ScoreSelect label="Technical" value={technicalSkill} onChange={setTechnicalSkill} />
                 </div>
                 <Textarea
                   label="Strengths"
@@ -475,9 +455,7 @@ export default function SessionDetailPage({
             </button>
           ) : (
             <div className="space-y-3">
-              <p className="text-[14px] font-medium">
-                Cancel this session?
-              </p>
+              <p className="text-[14px] font-medium">Cancel this session?</p>
               <p className="text-[13px] text-muted-foreground">
                 This cannot be undone. Your partner will no longer see this session.
               </p>

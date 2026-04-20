@@ -1,4 +1,5 @@
 import { get, post } from "@/lib/services/api";
+import type { UserRole } from "../types";
 
 export type AuthUser = {
   id: string;

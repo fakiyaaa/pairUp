@@ -37,7 +37,7 @@ def get_users(exclude_user_id=None, interview_type_id=None, timezone=None, exper
             u.bio,
             u.cal_com_link,
             r.name AS role,
-            array_agg(DISTINCT it.name) AS interview_types
+            array_remove(array_agg(DISTINCT it.name), NULL) AS interview_types
         FROM users u
         LEFT JOIN roles r ON r.id = u.role_id
         LEFT JOIN user_interview_types uit ON uit.user_id = u.id
