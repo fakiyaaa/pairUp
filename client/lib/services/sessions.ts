@@ -1,7 +1,26 @@
-const BASE =
-  process.env.NEXT_PUBLIC_API_URL?.trim() || "http://127.0.0.1:5001";
+import { get, post } from "@/lib/services/api";
 
-type SessionFeedbackPayload = {
+export type ApiSession = {
+  id: string;
+  status: string;
+  scheduled_at: string;
+  meeting_link: string | null;
+  interview_type: string | null;
+  interviewer_id: string;
+  interviewer_name: string;
+  interviewer_email: string;
+  interviewer_timezone: string;
+  interviewer_bio: string | null;
+  interviewer_cal_com_link: string | null;
+  interviewee_id: string;
+  interviewee_name: string;
+  interviewee_email: string;
+  interviewee_timezone: string;
+  interviewee_bio: string | null;
+  interviewee_cal_com_link: string | null;
+};
+
+export type SessionFeedbackPayload = {
   from_user_id: string;
   from_user_name: string;
   to_user_id?: string;
@@ -28,37 +47,19 @@ export type PersistedFeedback = {
   created_at: string;
 };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    credentials: "include",
-    ...init,
-  });
-  const contentType = res.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-  const data = isJson ? await res.json() : null;
-
-  if (!res.ok) {
-    const message =
-      data && typeof data === "object" && "error" in data
-        ? String((data as { error?: unknown }).error)
-        : "Request failed";
-    throw new Error(message);
-  }
-
-  if (!isJson) throw new Error("Server returned an unexpected response.");
-  return data as T;
-}
-
 export const sessionsApi = {
+  listUpcoming: () => get<ApiSession[]>("/sessions/"),
+  listCompleted: () => get<ApiSession[]>("/sessions/completed"),
+  get: (id: string) => get<ApiSession>(`/sessions/${id}`),
+
   getFeedback: (sessionId: string) =>
-    request<{ feedback: PersistedFeedback | null }>(
+    get<{ feedback: PersistedFeedback | null }>(
       `/sessions/${sessionId}/feedback`,
     ),
 
   createFeedback: (sessionId: string, payload: SessionFeedbackPayload) =>
-    request<{ feedback: PersistedFeedback }>(`/sessions/${sessionId}/feedback`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }),
+    post<{ feedback: PersistedFeedback }>(
+      `/sessions/${sessionId}/feedback`,
+      payload,
+    ),
 };

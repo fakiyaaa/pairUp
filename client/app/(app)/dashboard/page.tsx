@@ -53,6 +53,7 @@ export default function DashboardPage() {
           </h2>
           <div className="flex flex-col gap-2">
             {sessions.map((session) => {
+              if (!session.interviewer_id || !session.interviewee_id) return null;
               const isInterviewer = session.interviewer_id === user?.id;
               const partnerName = isInterviewer
                 ? session.interviewee_name
