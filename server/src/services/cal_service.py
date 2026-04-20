@@ -1,34 +1,39 @@
+import secrets
 import requests
 from urllib.parse import urlencode
 from flask import current_app
 from src.db import get_db
-from typing import Optional
+CAL_API_BASE = "https://api.cal.com/v2"
+CAL_API_VERSION = "2024-06-14"
 
-CALENDLY_API_BASE = "https://api.calendly.com"
 
-
-def _headers(access_token: str) -> dict:
-    return {"Authorization": f"Bearer {access_token}"}
+def _cal_headers(access_token: str) -> dict:
+    return {
+        "Authorization": f"Bearer {access_token}",
+        "cal-api-version": CAL_API_VERSION,
+    }
 
 
 def get_oauth_authorize_url() -> str:
-    client_id = current_app.config["CALENDLY_CLIENT_ID"]
-    redirect_uri = current_app.config["CALENDLY_REDIRECT_URI"]
+    client_id = current_app.config["CAL_CLIENT_ID"]
+    redirect_uri = current_app.config["CAL_REDIRECT_URI"]
     params = urlencode({
         "client_id": client_id,
         "redirect_uri": redirect_uri,
         "response_type": "code",
+        "scope": "PROFILE_READ BOOKING_READ WEBHOOK_READ WEBHOOK_WRITE",
+        "state": secrets.token_urlsafe(16),
     })
-    return f"https://auth.calendly.com/oauth/authorize?{params}"
+    return f"https://app.cal.com/auth/oauth2/authorize?{params}"
 
 
 def exchange_code_for_tokens(code: str) -> dict:
-    client_id = current_app.config["CALENDLY_CLIENT_ID"]
-    client_secret = current_app.config["CALENDLY_CLIENT_SECRET"]
-    redirect_uri = current_app.config["CALENDLY_REDIRECT_URI"]
+    client_id = current_app.config["CAL_CLIENT_ID"]
+    client_secret = current_app.config["CAL_CLIENT_SECRET"]
+    redirect_uri = current_app.config["CAL_REDIRECT_URI"]
     resp = requests.post(
-        "https://auth.calendly.com/oauth/token",
-        data={
+        "https://api.cal.com/v2/auth/oauth2/token",
+        json={
             "client_id": client_id,
             "client_secret": client_secret,
             "grant_type": "authorization_code",
@@ -40,27 +45,25 @@ def exchange_code_for_tokens(code: str) -> dict:
     return resp.json()
 
 
-def get_user_info(access_token: str) -> dict:
-    resp = requests.get(f"{CALENDLY_API_BASE}/users/me", headers=_headers(access_token))
+def get_cal_username(access_token: str) -> str | None:
+    resp = requests.get(f"{CAL_API_BASE}/me", headers=_cal_headers(access_token))
     resp.raise_for_status()
-    return resp.json().get("resource", {})
+    return resp.json().get("data", {}).get("username")
 
 
-def register_webhook(access_token: str, user_uri: str, organization_uri: str) -> Optional[str]:
-    webhook_url = current_app.config["CALENDLY_WEBHOOK_URL"]
+def register_webhook(access_token: str) -> str | None:
+    webhook_url = current_app.config["CAL_WEBHOOK_URL"]
     resp = requests.post(
-        f"{CALENDLY_API_BASE}/webhook_subscriptions",
-        headers=_headers(access_token),
+        f"{CAL_API_BASE}/webhooks",
+        headers=_cal_headers(access_token),
         json={
-            "url": webhook_url,
-            "events": ["invitee.created", "invitee.canceled"],
-            "organization": organization_uri,
-            "user": user_uri,
-            "scope": "user",
+            "active": True,
+            "subscriberUrl": webhook_url,
+            "triggers": ["BOOKING_CREATED", "BOOKING_RESCHEDULED", "BOOKING_CANCELLED"],
         },
     )
     resp.raise_for_status()
-    return resp.json().get("resource", {}).get("uri")
+    return resp.json().get("data", {}).get("id")
 
 
 def save_cal_connection(user_id: str, access_token: str, refresh_token: str, webhook_id: str, cal_com_link: str):

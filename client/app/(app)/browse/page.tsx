@@ -2,6 +2,7 @@
 
 import { Avatar } from "@/components/ui/avatar";
 import { profilesApi, type ProfileUser } from "@/lib/services/profiles";
+import { useAuth } from "@/lib/context/auth";
 import { cn, difficultyLabels, interviewTypeLabels } from "@/lib/utils";
 import { ExternalLink, Search, SlidersHorizontal, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -20,8 +21,22 @@ const emptyFilters: Filters = {
   experiences: [],
 };
 
-function buildScheduleUrl(schedulingUrl: string): string {
-  return schedulingUrl;
+function buildScheduleUrl(
+  interviewerCalLink: string,
+  intervieweeCalLink: string | undefined,
+  interviewType: string | null
+): string {
+  const interviewerUsername = interviewerCalLink.replace(/^https?:\/\/cal\.com\//, "");
+  const intervieweeUsername = intervieweeCalLink?.replace(/^https?:\/\/cal\.com\//, "");
+
+  const base =
+    intervieweeUsername
+      ? `https://cal.com/${interviewerUsername}+${intervieweeUsername}/30min`
+      : `https://cal.com/${interviewerUsername}`;
+
+  if (!interviewType) return base;
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}metadata[interviewType]=${encodeURIComponent(interviewType)}`;
 }
 
 function FilterSection({
@@ -63,6 +78,7 @@ function FilterSection({
 }
 
 export default function BrowsePage() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<ProfileUser[]>([]);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -241,7 +257,13 @@ export default function BrowsePage() {
 
                   {user.cal_com_link ? (
                     <a
-                      href={buildScheduleUrl(user.cal_com_link)}
+                      href={buildScheduleUrl(
+                        user.cal_com_link,
+                        currentUser?.cal_com_link ?? undefined,
+                        filters.interviewTypes.length === 1
+                          ? filters.interviewTypes[0]
+                          : null
+                      )}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium bg-accent hover:bg-accent-hover text-foreground rounded-lg transition-colors"

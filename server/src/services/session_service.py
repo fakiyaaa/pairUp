@@ -119,43 +119,35 @@ def _get_interview_type_id(cur, name: str):
     return row["id"] if row else None
 
 
-def _parse_calendly_payload(payload: dict):
-    event = payload.get("event", {})
-    invitee = payload.get("invitee", {})
-
-    assigned = event.get("extended_assigned_to") or []
-    organizer_email = assigned[0].get("email") if assigned else None
-    invitee_email = invitee.get("email")
-
-    location = event.get("location") or ""
-    meeting_link = location if location.startswith("http") else None
-
-    return {
-        "organizer_email": organizer_email,
-        "invitee_email": invitee_email,
-        "scheduled_at": event.get("start_time"),
-        "uid": event.get("uuid"),
-        "meeting_link": meeting_link,
-    }
-
-
 def create_session(payload: dict):
     db = get_db()
     cur = db.cursor()
 
-    parsed = _parse_calendly_payload(payload)
-    interviewer_id = _get_user_id_by_email(cur, parsed["organizer_email"])
-    interviewee_id = _get_user_id_by_email(cur, parsed["invitee_email"])
+    organizer_email = payload.get("organizer", {}).get("email")
+    attendees = payload.get("attendees", [])
+    attendee_email = attendees[0].get("email") if attendees else None
+
+    interviewer_id = _get_user_id_by_email(cur, organizer_email)
+    interviewee_id = _get_user_id_by_email(cur, attendee_email)
+
+    metadata = payload.get("metadata") or {}
+    interview_type_name = metadata.get("interviewType")
+    interview_type_id = _get_interview_type_id(cur, interview_type_name) if interview_type_name else None
+
+    video = payload.get("videoCallData") or {}
+    meeting_link = video.get("url") or payload.get("location")
+    scheduled_at = payload.get("startTime")
+    cal_booking_uid = payload.get("uid")
 
     cur.execute(
         """
         INSERT INTO sessions
             (interviewer_id, interviewee_id, interview_type_id, status, scheduled_at, meeting_link, cal_booking_uid)
         VALUES
-            (%s, %s, NULL, 'confirmed', %s, %s, %s)
+            (%s, %s, %s, 'confirmed', %s, %s, %s)
         ON CONFLICT (cal_booking_uid) DO NOTHING
         """,
-        (interviewer_id, interviewee_id, parsed["scheduled_at"], parsed["meeting_link"], parsed["uid"]),
+        (interviewer_id, interviewee_id, interview_type_id, scheduled_at, meeting_link, cal_booking_uid),
     )
     db.commit()
 
@@ -164,13 +156,12 @@ def reschedule_session(payload: dict):
     db = get_db()
     cur = db.cursor()
 
-    parsed = _parse_calendly_payload(payload)
-    old_event = payload.get("old_event", {})
-    old_uid = old_event.get("uuid") or parsed["uid"]
+    cal_booking_uid = payload.get("uid")
+    scheduled_at = payload.get("startTime")
 
     cur.execute(
         "UPDATE sessions SET scheduled_at = %s WHERE cal_booking_uid = %s",
-        (parsed["scheduled_at"], old_uid),
+        (scheduled_at, cal_booking_uid),
     )
     db.commit()
 
@@ -179,12 +170,11 @@ def cancel_session(payload: dict):
     db = get_db()
     cur = db.cursor()
 
-    event = payload.get("event", {})
-    uid = event.get("uuid")
+    cal_booking_uid = payload.get("uid")
 
     cur.execute(
         "UPDATE sessions SET status = 'cancelled' WHERE cal_booking_uid = %s",
-        (uid,),
+        (cal_booking_uid,),
     )
     db.commit()
 

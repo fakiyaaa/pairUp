@@ -48,7 +48,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [connectingCal, setConnectingCal] = useState(false);
-  const [calError, setCalError] = useState(searchParams.get("cal") === "error" ? "Failed to connect Calendly — please try again." : "");
+  const [calError, setCalError] = useState(searchParams.get("cal") === "error" ? "Failed to connect Cal.com — please try again." : "");
 
   // Edit form state
   const [name, setName] = useState("");
@@ -114,7 +114,7 @@ export default function ProfilePage() {
       const { url } = await calApi.getConnectUrl();
       window.location.href = url;
     } catch {
-      setCalError("Failed to start Calendly connection — please try again.");
+      setCalError("Failed to start Cal.com connection — please try again.");
       setConnectingCal(false);
     }
   }
@@ -363,10 +363,10 @@ export default function ProfilePage() {
           Scheduling
         </h2>
 
-        {profile.cal_com_link || searchParams.get("cal") === "connected" ? (
+        {profile.cal_webhook_id || searchParams.get("cal") === "connected" ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="text-[13px] text-success font-medium">✓ Calendly connected</span>
+              <span className="text-[13px] text-success font-medium">✓ Cal.com connected</span>
               {profile.cal_com_link && (
                 <a
                   href={profile.cal_com_link}
@@ -380,17 +380,17 @@ export default function ProfilePage() {
               )}
             </div>
             <Button size="sm" variant="secondary" onClick={handleConnectCal} disabled={connectingCal}>
-              {connectingCal ? "Redirecting…" : "Reconnect Calendly"}
+              {connectingCal ? "Redirecting…" : "Reconnect Cal.com"}
             </Button>
             {calError && <p className="text-[13px] text-danger">{calError}</p>}
           </div>
         ) : (
           <div className="space-y-3">
             <p className="text-[14px] text-muted-foreground">
-              Connect your Calendly account so PairUp can auto-create sessions when a booking is made.
+              Connect your Cal.com account so PairUp can match your availability with others and auto-create sessions when a booking is made.
             </p>
             <Button size="sm" variant="secondary" onClick={handleConnectCal} disabled={connectingCal}>
-              {connectingCal ? "Redirecting…" : "Connect Calendly"}
+              {connectingCal ? "Redirecting…" : "Connect Cal.com"}
             </Button>
             {calError && <p className="text-[13px] text-danger">{calError}</p>}
             {editing && (
@@ -398,7 +398,7 @@ export default function ProfilePage() {
                 <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="url"
-                  placeholder="Or paste your Calendly link"
+                  placeholder="Or paste any scheduling link (Calendly, etc.)"
                   value={schedulingUrl}
                   onChange={(e) => setSchedulingUrl(e.target.value)}
                   className="w-full pl-9 pr-4 py-2.5 text-[14px] bg-card border border-border rounded-xl placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
