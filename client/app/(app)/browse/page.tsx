@@ -27,11 +27,13 @@ function buildScheduleUrl(
   intervieweeEmail: string | undefined,
   interviewType: string | null
 ): string {
+  // Strip OAuth app suffix from Cal.com managed user URLs (e.g. "cal.com/user+appSlug" → "cal.com/user")
+  const cleanLink = interviewerCalLink.replace(/(cal\.com\/[^/+?#]+)\+[^/+?#]+/, "$1");
   const params = new URLSearchParams();
   if (interviewType) params.set("metadata[interviewType]", interviewType);
   if (intervieweeEmail) params.set("metadata[intervieweeEmail]", intervieweeEmail);
   const query = params.toString();
-  return query ? `${interviewerCalLink}?${query}` : interviewerCalLink;
+  return query ? `${cleanLink}?${query}` : cleanLink;
 }
 
 function FilterSection({

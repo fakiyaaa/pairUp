@@ -40,7 +40,9 @@ def exchange():
     except Exception:
         return jsonify({"error": "Could not fetch Cal.com username"}), 400
 
-    cal_com_link = f"https://cal.com/{username}" if username else ""
+    # Cal.com OAuth managed users get "username+appSlug" — strip the suffix
+    clean_username = username.split("+")[0] if username else ""
+    cal_com_link = f"https://cal.com/{clean_username}" if clean_username else ""
 
     webhook_id = None
     try:
