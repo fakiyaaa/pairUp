@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { profileApi, type ProfileData, type Topic, type InterviewType, type Role } from "@/lib/services/profile";
 import { authApi } from "@/lib/services/auth";
 import { calApi } from "@/lib/services/cal";
+import { profileApi, type InterviewType, type ProfileData, type Role, type Topic } from "@/lib/services/profile";
+import { timezones } from "@/lib/timezones";
 import { cn, difficultyLabels, formatDate, interviewTypeLabels } from "@/lib/utils";
 import type { Difficulty, UserRole } from "@/lib/types";
 import { ExternalLink, Link2 } from "lucide-react";
@@ -20,15 +21,6 @@ const roleDisplay: Record<UserRole, string> = {
   both: "Interviewer and Interviewee",
 };
 
-const timezones = [
-  { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
-  { value: "America/New_York", label: "Eastern Time (ET)" },
-  { value: "Europe/London", label: "London (GMT)" },
-  { value: "Europe/Berlin", label: "Berlin (CET)" },
-  { value: "Asia/Kolkata", label: "India (IST)" },
-  { value: "Asia/Tokyo", label: "Tokyo (JST)" },
-  { value: "Asia/Seoul", label: "Seoul (KST)" },
-];
 
 export default function ProfilePage() {
   const router = useRouter();
