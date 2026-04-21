@@ -24,22 +24,14 @@ const emptyFilters: Filters = {
 
 function buildScheduleUrl(
   interviewerCalLink: string,
-  intervieweeCalLink: string | undefined,
+  intervieweeEmail: string | undefined,
   interviewType: string | null
 ): string {
-  if (!interviewerCalLink.includes("cal.com")) return interviewerCalLink;
-  const interviewerUsername = interviewerCalLink.replace(/^https?:\/\/cal\.com\//, "");
-  const rawInterviewee = intervieweeCalLink?.includes("cal.com") ? intervieweeCalLink : undefined;
-  const intervieweeUsername = rawInterviewee?.replace(/^https?:\/\/cal\.com\//, "");
-
-  const base =
-    intervieweeUsername
-      ? `https://cal.com/${interviewerUsername}+${intervieweeUsername}/30min`
-      : `https://cal.com/${interviewerUsername}`;
-
-  if (!interviewType) return base;
-  const separator = base.includes("?") ? "&" : "?";
-  return `${base}${separator}metadata[interviewType]=${encodeURIComponent(interviewType)}`;
+  const params = new URLSearchParams();
+  if (interviewType) params.set("metadata[interviewType]", interviewType);
+  if (intervieweeEmail) params.set("metadata[intervieweeEmail]", intervieweeEmail);
+  const query = params.toString();
+  return query ? `${interviewerCalLink}?${query}` : interviewerCalLink;
 }
 
 function FilterSection({
@@ -266,7 +258,7 @@ export default function BrowsePage() {
                     <a
                       href={buildScheduleUrl(
                         user.cal_com_link,
-                        currentUser?.cal_com_link ?? undefined,
+                        currentUser?.email ?? undefined,
                         filters.interviewTypes.length === 1
                           ? filters.interviewTypes[0]
                           : null
