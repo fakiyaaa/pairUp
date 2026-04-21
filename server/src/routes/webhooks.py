@@ -41,6 +41,7 @@ def cal_webhook():
     if event == "BOOKING_CREATED":
         create_session(payload)
     elif event == "BOOKING_RESCHEDULED":
+        current_app.logger.warning(f"RESCHEDULE_PAYLOAD: {payload}")
         reschedule_session(payload)
     elif event == "BOOKING_CANCELLED":
         cancel_session(payload)
