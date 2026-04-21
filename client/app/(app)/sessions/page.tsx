@@ -11,10 +11,6 @@ import { useEffect, useState } from "react";
 
 const tabs = ["Upcoming", "Completed"];
 
-const canReschedule = (scheduledAt: string) => {
-  const oneHour = 1000 * 60 * 60;
-  return new Date(scheduledAt).getTime() - Date.now() > oneHour;
-};
 
 export default function SessionsPage() {
   const { user } = useAuth();
@@ -101,9 +97,6 @@ export default function SessionsPage() {
             const partnerName = isInterviewer
               ? session.interviewee_name
               : session.interviewer_name;
-            const partnerCalComLink = isInterviewer
-              ? session.interviewee_cal_com_link
-              : session.interviewer_cal_com_link;
             const scheduled = new Date(session.scheduled_at);
 
             return (
@@ -125,42 +118,17 @@ export default function SessionsPage() {
                     )}
                   </p>
                 </div>
-                {session.status === "confirmed" && (
-                  <div
-                    className="flex items-center gap-2"
-                    onClick={(e) => e.preventDefault()}
+                {session.status === "confirmed" && session.meeting_link && (
+                  <a
+                    href={session.meeting_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-[12px] font-medium text-foreground bg-accent px-2 py-1 rounded-md flex items-center gap-1"
                   >
-                    {session.meeting_link && (
-                      <a
-                        href={session.meeting_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[12px] font-medium text-foreground bg-accent px-2 py-1 rounded-md flex items-center gap-1"
-                      >
-                        <Video className="w-3.5 h-3.5" />
-                        Join
-                      </a>
-                    )}
-                    {partnerCalComLink && (
-                      canReschedule(session.scheduled_at) ? (
-                        <a
-                          href={partnerCalComLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[12px] font-medium text-muted-foreground border border-border px-2 py-1 rounded-md hover:text-foreground transition-colors"
-                        >
-                          Reschedule
-                        </a>
-                      ) : (
-                        <span
-                          title="Cannot reschedule within 1 hour of session"
-                          className="text-[12px] font-medium text-muted-foreground/40 border border-border px-2 py-1 rounded-md cursor-not-allowed"
-                        >
-                          Reschedule
-                        </span>
-                      )
-                    )}
-                  </div>
+                    <Video className="w-3.5 h-3.5" />
+                    Join
+                  </a>
                 )}
                 {session.status === "completed" && (
                   <span className="flex items-center gap-1 text-[12px] text-muted-foreground">

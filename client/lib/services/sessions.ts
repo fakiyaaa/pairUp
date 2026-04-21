@@ -18,6 +18,7 @@ export type ApiSession = {
   interviewee_timezone: string;
   interviewee_bio: string | null;
   interviewee_cal_com_link: string | null;
+  cal_booking_uid: string | null;
 };
 
 export type PersistedFeedback = {
