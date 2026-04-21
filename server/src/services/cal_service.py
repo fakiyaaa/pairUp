@@ -68,7 +68,9 @@ def get_cal_booking_url(access_token: str, username: str) -> str:
                 event_types.extend(group.get("eventTypes", []))
         for et in event_types:
             slug = et.get("slug")
-            if slug:
+            scheduling_type = et.get("schedulingType")
+            # Skip collective/round-robin types — only use individual (null schedulingType)
+            if slug and scheduling_type not in ("COLLECTIVE", "ROUND_ROBIN"):
                 return f"https://cal.com/{username}/{slug}"
     except Exception:
         pass
