@@ -41,7 +41,8 @@ def exchange():
     except Exception:
         return jsonify({"error": "Could not fetch Cal.com username"}), 400
 
-    cal_com_link = get_cal_booking_url(access_token, username) if username else ""
+    clean_username = username.split("+")[0]
+    cal_com_link = get_cal_booking_url(access_token, clean_username) if clean_username else ""
 
     webhook_id = None
     try:
