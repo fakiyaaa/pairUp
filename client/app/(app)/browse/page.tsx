@@ -124,8 +124,8 @@ export default function BrowsePage() {
       if (!search) return true;
       const q = search.toLowerCase();
       return (
-        u.full_name.toLowerCase().includes(q) ||
-        u.bio.toLowerCase().includes(q) ||
+        (u.full_name ?? "").toLowerCase().includes(q) ||
+        (u.bio ?? "").toLowerCase().includes(q) ||
         u.interview_types.some(
           (t) =>
             t.toLowerCase().includes(q) ||
