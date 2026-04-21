@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, redirect, request, g, current_app
 from src.middleware.auth import require_auth
 from src.services.cal_service import (
     exchange_code_for_tokens,
+    get_cal_booking_url,
     get_cal_username,
     get_oauth_authorize_url,
     register_webhook,
@@ -40,9 +41,8 @@ def exchange():
     except Exception:
         return jsonify({"error": "Could not fetch Cal.com username"}), 400
 
-    # Cal.com OAuth managed users get "username+appSlug" — strip the suffix
-    clean_username = username.split("+")[0] if username else ""
-    cal_com_link = f"https://cal.com/{clean_username}" if clean_username else ""
+    clean_username = username.split("+")[0]
+    cal_com_link = get_cal_booking_url(access_token, clean_username) if clean_username else ""
 
     webhook_id = None
     try:
