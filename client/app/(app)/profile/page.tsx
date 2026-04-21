@@ -411,7 +411,7 @@ export default function ProfilePage() {
           Scheduling
         </h2>
 
-        {profile.cal_com_link?.includes("cal.com") || searchParams.get("cal") === "connected" ? (
+        {profile.cal_connected || searchParams.get("cal") === "connected" ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <span className="text-[13px] text-success font-medium">✓ Cal.com connected</span>

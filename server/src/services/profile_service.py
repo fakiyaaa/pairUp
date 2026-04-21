@@ -112,6 +112,8 @@ def get_me(user_id):
     )
     profile["topics"] = [{"id": r["id"], "name": r["name"]} for r in cur.fetchall()]
 
+    profile["cal_connected"] = bool(profile.get("cal_access_token"))
+
     cur.execute(
         """
         SELECT
