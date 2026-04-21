@@ -22,7 +22,7 @@ const emptyFilters: Filters = {
   experiences: [],
 };
 
-function buildScheduleUrl( 
+function buildScheduleUrl(
   interviewerCalLink: string,
   intervieweeEmail: string | undefined,
   interviewType: string | null
