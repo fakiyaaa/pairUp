@@ -86,25 +86,41 @@ def _get_interview_type_id(cur, name: str):
 
 
 def create_session(payload: dict):
-    """Insert a confirmed session from the webhook payload and commit the transaction."""
+    """Insert a confirmed session from the webhook payload and commit the transaction.
+    If the payload contains a rescheduleUid, update the existing session instead."""
     db = get_db()
     cur = db.cursor()
+
+    new_uid = payload.get("uid")
+    reschedule_uid = payload.get("rescheduleUid")
+    scheduled_at = payload.get("startTime")
+    video = payload.get("videoCallData") or {}
+    meeting_link = video.get("url") or payload.get("location")
+
+    if reschedule_uid:
+        cur.execute(
+            """
+            UPDATE sessions
+            SET scheduled_at = %s, cal_booking_uid = %s, meeting_link = %s, status = 'confirmed'
+            WHERE cal_booking_uid = %s
+            """,
+            (scheduled_at, new_uid, meeting_link, reschedule_uid),
+        )
+        db.commit()
+        return
 
     organizer_email = payload.get("organizer", {}).get("email")
     attendees = payload.get("attendees", [])
     attendee_email = attendees[0].get("email") if attendees else None
+    metadata = payload.get("metadata") or {}
 
     interviewer_id = _get_user_id_by_email(cur, organizer_email)
-    interviewee_id = _get_user_id_by_email(cur, attendee_email)
-
-    metadata = payload.get("metadata") or {}
+    interviewee_id = (
+        _get_user_id_by_email(cur, metadata.get("intervieweeEmail"))
+        or _get_user_id_by_email(cur, attendee_email)
+    )
     interview_type_name = metadata.get("interviewType")
     interview_type_id = _get_interview_type_id(cur, interview_type_name) if interview_type_name else None
-
-    video = payload.get("videoCallData") or {}
-    meeting_link = video.get("url") or payload.get("location")
-    scheduled_at = payload.get("startTime")
-    cal_booking_uid = payload.get("uid")
 
     cur.execute(
         """
@@ -114,22 +130,25 @@ def create_session(payload: dict):
             (%s, %s, %s, 'confirmed', %s, %s, %s)
         ON CONFLICT (cal_booking_uid) DO NOTHING
         """,
-        (interviewer_id, interviewee_id, interview_type_id, scheduled_at, meeting_link, cal_booking_uid),
+        (interviewer_id, interviewee_id, interview_type_id, scheduled_at, meeting_link, new_uid),
     )
     db.commit()
 
 
 def reschedule_session(payload: dict):
-    """Update the scheduled_at time for the session identified by payload uid and commit the transaction."""
+    """Update the scheduled_at time and booking UID for the rescheduled session and commit the transaction."""
     db = get_db()
     cur = db.cursor()
 
-    cal_booking_uid = payload.get("uid")
+    new_uid = payload.get("uid")
+    original_uid = payload.get("rescheduledFromUid") or new_uid
     scheduled_at = payload.get("startTime")
+    video = payload.get("videoCallData") or {}
+    meeting_link = video.get("url") or payload.get("location")
 
     cur.execute(
-        "UPDATE sessions SET scheduled_at = %s WHERE cal_booking_uid = %s",
-        (scheduled_at, cal_booking_uid),
+        "UPDATE sessions SET scheduled_at = %s, cal_booking_uid = %s, meeting_link = %s WHERE cal_booking_uid = %s",
+        (scheduled_at, new_uid, meeting_link, original_uid),
     )
     db.commit()
 

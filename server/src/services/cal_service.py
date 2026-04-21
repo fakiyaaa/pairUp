@@ -77,14 +77,18 @@ def get_cal_booking_url(access_token: str, username: str) -> str:
 
 def register_webhook(access_token: str) -> Optional[str]:
     webhook_url = current_app.config["CAL_WEBHOOK_URL"]
+    secret = current_app.config.get("CAL_WEBHOOK_SECRET", "")
+    body = {
+        "active": True,
+        "subscriberUrl": webhook_url,
+        "triggers": ["BOOKING_CREATED", "BOOKING_RESCHEDULED", "BOOKING_CANCELLED"],
+    }
+    if secret:
+        body["secret"] = secret
     resp = requests.post(
         f"{CAL_API_BASE}/webhooks",
         headers=_cal_headers(access_token),
-        json={
-            "active": True,
-            "subscriberUrl": webhook_url,
-            "triggers": ["BOOKING_CREATED", "BOOKING_RESCHEDULED", "BOOKING_CANCELLED"],
-        },
+        json=body,
     )
     resp.raise_for_status()
     return resp.json().get("data", {}).get("id")

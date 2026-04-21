@@ -18,8 +18,8 @@ def create_app(config_class=Config):
     frontend_origin = app.config["FRONTEND_URL"]
     allowed_origins = {
         frontend_origin,
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
     }
     CORS(app, origins=list(allowed_origins), supports_credentials=True)
     JWTManager(app)
