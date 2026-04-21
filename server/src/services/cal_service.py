@@ -24,6 +24,7 @@ def get_oauth_authorize_url() -> str:
         "response_type": "code",
         "scope": "PROFILE_READ BOOKING_READ WEBHOOK_READ WEBHOOK_WRITE",
         "state": secrets.token_urlsafe(16),
+        "prompt": "login",
     })
     return f"https://app.cal.com/auth/oauth2/authorize?{params}"
 
