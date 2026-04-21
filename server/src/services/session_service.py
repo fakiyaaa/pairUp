@@ -24,7 +24,8 @@ def _session_query(where_clause: str, params: tuple):
             interviewee.email        AS interviewee_email,
             interviewee.timezone     AS interviewee_timezone,
             interviewee.bio          AS interviewee_bio,
-            interviewee.cal_com_link AS interviewee_cal_com_link
+            interviewee.cal_com_link AS interviewee_cal_com_link,
+            s.cal_booking_uid
         FROM sessions s
         JOIN users interviewer ON interviewer.id = s.interviewer_id
         JOIN users interviewee ON interviewee.id = s.interviewee_id

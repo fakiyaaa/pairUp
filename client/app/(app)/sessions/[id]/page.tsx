@@ -240,10 +240,10 @@ export default function SessionDetailPage({
             </a>
           )}
 
-          {partnerCalComLink ? (
+          {session.cal_booking_uid ? (
             canReschedule ? (
               <a
-                href={partnerCalComLink}
+                href={`https://cal.com/reschedule/${session.cal_booking_uid}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-4 bg-muted rounded-xl hover:bg-border/60 transition-colors text-[14px] font-medium"
