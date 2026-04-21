@@ -53,6 +53,22 @@ def get_cal_username(access_token: str) -> Optional[str]:
     return resp.json().get("data", {}).get("username")
 
 
+def get_cal_booking_url(access_token: str, username: str) -> str:
+    """Return the first event type booking URL, falling back to the profile URL."""
+    try:
+        resp = requests.get(f"{CAL_API_BASE}/event-types", headers=_cal_headers(access_token))
+        resp.raise_for_status()
+        event_types = resp.json().get("data", {}).get("eventTypeGroups", [])
+        for group in event_types:
+            for et in group.get("eventTypes", []):
+                slug = et.get("slug")
+                if slug:
+                    return f"https://cal.com/{username}/{slug}"
+    except Exception:
+        pass
+    return f"https://cal.com/{username}"
+
+
 def register_webhook(access_token: str) -> Optional[str]:
     webhook_url = current_app.config["CAL_WEBHOOK_URL"]
     secret = current_app.config.get("CAL_WEBHOOK_SECRET", "")
