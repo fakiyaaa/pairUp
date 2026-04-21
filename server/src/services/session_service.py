@@ -93,11 +93,13 @@ def create_session(payload: dict):
     organizer_email = payload.get("organizer", {}).get("email")
     attendees = payload.get("attendees", [])
     attendee_email = attendees[0].get("email") if attendees else None
+    metadata = payload.get("metadata") or {}
 
     interviewer_id = _get_user_id_by_email(cur, organizer_email)
-    interviewee_id = _get_user_id_by_email(cur, attendee_email)
-
-    metadata = payload.get("metadata") or {}
+    interviewee_id = (
+        _get_user_id_by_email(cur, metadata.get("intervieweeEmail"))
+        or _get_user_id_by_email(cur, attendee_email)
+    )
     interview_type_name = metadata.get("interviewType")
     interview_type_id = _get_interview_type_id(cur, interview_type_name) if interview_type_name else None
 
