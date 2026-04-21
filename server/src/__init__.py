@@ -8,6 +8,7 @@ from src.routes.auth import auth_bp
 from src.routes.profiles import profiles_bp
 from src.routes.sessions import sessions_bp
 from src.routes.webhooks import webhooks_bp
+from src.routes.cal_oauth import cal_oauth_bp
 
 
 def create_app(config_class=Config):
@@ -17,8 +18,8 @@ def create_app(config_class=Config):
     frontend_origin = app.config["FRONTEND_URL"]
     allowed_origins = {
         frontend_origin,
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
     }
     CORS(app, origins=list(allowed_origins), supports_credentials=True)
     JWTManager(app)
@@ -29,6 +30,7 @@ def create_app(config_class=Config):
     app.register_blueprint(profiles_bp, url_prefix="/profiles")
     app.register_blueprint(sessions_bp, url_prefix="/sessions")
     app.register_blueprint(webhooks_bp, url_prefix="/webhooks")
+    app.register_blueprint(cal_oauth_bp, url_prefix="/auth/cal")
 
     @app.route("/health")
     def health():

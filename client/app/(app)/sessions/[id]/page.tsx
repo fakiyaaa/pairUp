@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/context/auth";
 import {
-  sessionsApi,
   type ApiSession,
   type PersistedFeedback,
+  sessionsApi,
 } from "@/lib/services/sessions";
 import { formatDate, formatTime, interviewTypeLabels } from "@/lib/utils";
 import {
@@ -15,10 +15,12 @@ import {
   Calendar,
   CheckCircle2,
   ExternalLink,
+  Star,
   Video,
 } from "lucide-react";
 import Link from "next/link";
-import { use, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useState } from "react";
 
 function ScoreSelect({
   label,
@@ -59,16 +61,21 @@ export default function SessionDetailPage({
 }) {
   const { id } = use(params);
   const { user } = useAuth();
+  const router = useRouter();
+
   const [session, setSession] = useState<ApiSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+
+  const [feedback, setFeedback] = useState<PersistedFeedback | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [persistedFeedback, setPersistedFeedback] =
-    useState<PersistedFeedback | null>(null);
+  const [formError, setFormError] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState("");
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [rating, setRating] = useState(0);
   const [communication, setCommunication] = useState(0);
   const [preparedness, setPreparedness] = useState(0);
   const [technicalSkill, setTechnicalSkill] = useState(0);
@@ -80,70 +87,74 @@ export default function SessionDetailPage({
     sessionsApi
       .get(id)
       .then(setSession)
-      .catch((err) => {
-        if (err?.status === 404) setNotFound(true);
-        else setLoadError(true);
-      })
+      .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [id]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!session) return;
+    sessionsApi
+      .getFeedback(id)
+      .then((res) => setFeedback(res.feedback))
+      .catch(() => {});
+  }, [id, session]);
 
-    async function loadFeedback() {
-      if (!session) return;
-      try {
-        const res = await sessionsApi.getFeedback(session.id);
-        if (!cancelled) setPersistedFeedback(res.feedback);
-      } catch {
-        // Leave persistedFeedback null if the backend fetch fails.
-      }
+  async function handleSubmitFeedback() {
+    if (!session || !user) return;
+    if (!rating || !communication || !preparedness || !technicalSkill) {
+      setFormError("Please fill in all ratings before submitting.");
+      return;
     }
 
-    loadFeedback();
-    return () => {
-      cancelled = true;
-    };
-  }, [session]);
+    const isInterviewer = session.interviewer_id === user.id;
+    const toUserId = isInterviewer ? session.interviewee_id : session.interviewer_id;
 
-  const effectiveFeedback = useMemo(() => {
-    if (!persistedFeedback) return null;
-    return {
-      communication: persistedFeedback.communication,
-      preparedness: persistedFeedback.preparedness,
-      technicalSkill: persistedFeedback.technical_skill,
-      strengths: persistedFeedback.strengths || "",
-      improvements: persistedFeedback.improvements || "",
-      notes: persistedFeedback.notes || "",
-      fromUser: { name: persistedFeedback.from_user_name },
-    };
-  }, [persistedFeedback]);
-
-  if (loading) {
-    return <p className="text-[14px] text-muted-foreground">Loading…</p>;
+    setSaving(true);
+    setFormError("");
+    try {
+      const res = await sessionsApi.createFeedback(id, {
+        from_user_id: user.id,
+        from_user_name: user.full_name ?? user.email,
+        to_user_id: toUserId,
+        rating,
+        communication,
+        preparedness,
+        technical_skill: technicalSkill,
+        strengths,
+        improvements,
+        notes,
+      });
+      setFeedback(res.feedback);
+      setSubmitted(true);
+      setShowFeedback(false);
+    } catch {
+      setFormError("Failed to submit feedback. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (loadError) {
+  async function handleCancel() {
+    setCancelling(true);
+    setCancelError("");
+    try {
+      await sessionsApi.cancel(id);
+      router.push("/sessions");
+    } catch {
+      setCancelError("Failed to cancel session. Please try again.");
+      setCancelling(false);
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="text-center py-20">
-        <p className="text-[14px] text-muted-foreground mb-4">
-          Something went wrong. Please try again.
-        </p>
-        <Link href="/sessions">
-          <Button variant="secondary" size="sm">
-            Back
-          </Button>
-        </Link>
-      </div>
+      <p className="text-[14px] text-muted-foreground py-20 text-center">
+        Loading…
+      </p>
     );
   }
 
-  if (
-    notFound ||
-    !session ||
-    !session.interviewer_id ||
-    !session.interviewee_id
-  ) {
+  if (notFound || !session || !session.interviewer_id || !session.interviewee_id) {
     return (
       <div className="text-center py-20">
         <p className="text-[14px] text-muted-foreground mb-4">
@@ -159,9 +170,6 @@ export default function SessionDetailPage({
   }
 
   const isInterviewer = session.interviewer_id === user?.id;
-  const partnerId = isInterviewer
-    ? session.interviewee_id
-    : session.interviewer_id;
   const partnerName = isInterviewer
     ? session.interviewee_name
     : session.interviewer_name;
@@ -171,51 +179,13 @@ export default function SessionDetailPage({
   const partnerTimezone = isInterviewer
     ? session.interviewee_timezone
     : session.interviewer_timezone;
-  const partnerCalLink = isInterviewer
+  const partnerCalComLink = isInterviewer
     ? session.interviewee_cal_com_link
     : session.interviewer_cal_com_link;
-  const scheduled = session.scheduled_at
-    ? new Date(session.scheduled_at)
-    : null;
 
+  const scheduled = new Date(session.scheduled_at);
   const canReschedule =
-    !!scheduled && Date.now() < scheduled.getTime() - 1000 * 60 * 60;
-
-  async function handleSubmitFeedback() {
-    if (!user) {
-      setError("You must be signed in to submit feedback.");
-      return;
-    }
-    if (!communication || !preparedness || !technicalSkill) {
-      setError("Please add scores before submitting.");
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-    try {
-      const res = await sessionsApi.createFeedback(id, {
-        from_user_id: user.id,
-        from_user_name: user.full_name,
-        to_user_id: partnerId,
-        communication,
-        preparedness,
-        technical_skill: technicalSkill,
-        strengths,
-        improvements,
-        notes,
-      });
-      setPersistedFeedback(res.feedback);
-      setSubmitted(true);
-      setShowFeedback(false);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to submit feedback",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
+    Date.now() < new Date(session.scheduled_at).getTime() - 1000 * 60 * 60;
 
   return (
     <div>
@@ -240,16 +210,14 @@ export default function SessionDetailPage({
           </h1>
           <p className="text-[14px] text-muted-foreground">
             {formatDate(session.scheduled_at)} at{" "}
-            {scheduled
-              ? formatTime(
-                  `${scheduled.getHours()}:${String(scheduled.getMinutes()).padStart(2, "0")}`,
-                )
-              : "—"}
+            {formatTime(
+              `${String(scheduled.getHours()).padStart(2, "0")}:${String(scheduled.getMinutes()).padStart(2, "0")}`,
+            )}
           </p>
         </div>
       </div>
 
-      {/* Join banner */}
+      {/* Join + Reschedule banner */}
       {session.status === "confirmed" && (
         <div className="flex gap-3 mb-8">
           {session.meeting_link && (
@@ -272,10 +240,10 @@ export default function SessionDetailPage({
             </a>
           )}
 
-          {partnerCalLink &&
-            (canReschedule ? (
+          {partnerCalComLink ? (
+            canReschedule ? (
               <a
-                href={partnerCalLink}
+                href={partnerCalComLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-4 bg-muted rounded-xl hover:bg-border/60 transition-colors text-[14px] font-medium"
@@ -291,7 +259,8 @@ export default function SessionDetailPage({
                 <Calendar className="w-4 h-4" />
                 Reschedule
               </div>
-            ))}
+            )
+          ) : null}
         </div>
       )}
 
@@ -313,12 +282,14 @@ export default function SessionDetailPage({
             <p className="text-muted-foreground text-[12px] mb-0.5">Status</p>
             <p className="font-medium capitalize">{session.status}</p>
           </div>
-          <div>
-            <p className="text-muted-foreground text-[12px] mb-0.5">
-              Partner timezone
-            </p>
-            <p className="font-medium">{partnerTimezone}</p>
-          </div>
+          {partnerTimezone && (
+            <div>
+              <p className="text-muted-foreground text-[12px] mb-0.5">
+                Partner timezone
+              </p>
+              <p className="font-medium">{partnerTimezone}</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -341,30 +312,25 @@ export default function SessionDetailPage({
       </section>
 
       {/* Feedback received */}
-      {effectiveFeedback && (
+      {feedback && (
         <section className="mb-8">
           <h2 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-4">
             Feedback
           </h2>
           <div className="space-y-4">
-            <p className="text-[13px] text-muted-foreground">
-              from {effectiveFeedback.fromUser.name}
-            </p>
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              <span className="text-[14px] font-medium">{feedback.rating}/5</span>
+              <span className="text-[13px] text-muted-foreground">
+                from {feedback.from_user_name}
+              </span>
+            </div>
 
             <div className="grid grid-cols-3 gap-3">
               {[
-                {
-                  label: "Communication",
-                  value: effectiveFeedback.communication,
-                },
-                {
-                  label: "Preparedness",
-                  value: effectiveFeedback.preparedness,
-                },
-                {
-                  label: "Technical",
-                  value: effectiveFeedback.technicalSkill,
-                },
+                { label: "Communication", value: feedback.communication },
+                { label: "Preparedness", value: feedback.preparedness },
+                { label: "Technical", value: feedback.technical_skill },
               ].map((item) => (
                 <div
                   key={item.label}
@@ -378,34 +344,28 @@ export default function SessionDetailPage({
               ))}
             </div>
 
-            {effectiveFeedback.strengths && (
+            {feedback.strengths && (
               <div>
                 <p className="text-[12px] font-medium text-muted-foreground mb-1">
                   Strengths
                 </p>
-                <p className="text-[14px] leading-relaxed">
-                  {effectiveFeedback.strengths}
-                </p>
+                <p className="text-[14px] leading-relaxed">{feedback.strengths}</p>
               </div>
             )}
-            {effectiveFeedback.improvements && (
+            {feedback.improvements && (
               <div>
                 <p className="text-[12px] font-medium text-muted-foreground mb-1">
                   Improvements
                 </p>
-                <p className="text-[14px] leading-relaxed">
-                  {effectiveFeedback.improvements}
-                </p>
+                <p className="text-[14px] leading-relaxed">{feedback.improvements}</p>
               </div>
             )}
-            {effectiveFeedback.notes && (
+            {feedback.notes && (
               <div>
                 <p className="text-[12px] font-medium text-muted-foreground mb-1">
                   Notes
                 </p>
-                <p className="text-[14px] leading-relaxed">
-                  {effectiveFeedback.notes}
-                </p>
+                <p className="text-[14px] leading-relaxed">{feedback.notes}</p>
               </div>
             )}
           </div>
@@ -413,7 +373,7 @@ export default function SessionDetailPage({
       )}
 
       {/* Feedback form */}
-      {session.status === "completed" && !effectiveFeedback && !submitted && (
+      {session.status === "completed" && !feedback && !submitted && (
         <section>
           {!showFeedback ? (
             <button
@@ -428,22 +388,11 @@ export default function SessionDetailPage({
                 Leave feedback
               </h2>
               <div className="space-y-5">
-                <div className="grid grid-cols-3 gap-4">
-                  <ScoreSelect
-                    label="Communication"
-                    value={communication}
-                    onChange={setCommunication}
-                  />
-                  <ScoreSelect
-                    label="Preparedness"
-                    value={preparedness}
-                    onChange={setPreparedness}
-                  />
-                  <ScoreSelect
-                    label="Technical"
-                    value={technicalSkill}
-                    onChange={setTechnicalSkill}
-                  />
+                <div className="grid grid-cols-4 gap-4">
+                  <ScoreSelect label="Overall" value={rating} onChange={setRating} />
+                  <ScoreSelect label="Communication" value={communication} onChange={setCommunication} />
+                  <ScoreSelect label="Preparedness" value={preparedness} onChange={setPreparedness} />
+                  <ScoreSelect label="Technical" value={technicalSkill} onChange={setTechnicalSkill} />
                 </div>
                 <Textarea
                   label="Strengths"
@@ -466,6 +415,9 @@ export default function SessionDetailPage({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
+                {formError && (
+                  <p className="text-[13px] text-danger">{formError}</p>
+                )}
                 <div className="flex justify-end gap-3">
                   <Button
                     variant="secondary"
@@ -475,10 +427,9 @@ export default function SessionDetailPage({
                     Cancel
                   </Button>
                   <Button onClick={handleSubmitFeedback} disabled={saving}>
-                    {saving ? "Submitting..." : "Submit"}
+                    {saving ? "Submitting…" : "Submit"}
                   </Button>
                 </div>
-                {error && <p className="text-[13px] text-red-500">{error}</p>}
               </div>
             </div>
           )}
@@ -495,9 +446,42 @@ export default function SessionDetailPage({
       {/* Cancel */}
       {session.status === "confirmed" && (
         <div className="mt-10 pt-6 border-t border-border">
-          <button className="text-[13px] text-danger hover:underline cursor-pointer">
-            Cancel session
-          </button>
+          {!showCancelConfirm ? (
+            <button
+              onClick={() => setShowCancelConfirm(true)}
+              className="text-[13px] text-danger hover:underline cursor-pointer"
+            >
+              Cancel session
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-[14px] font-medium">Cancel this session?</p>
+              <p className="text-[13px] text-muted-foreground">
+                This cannot be undone. Your partner will no longer see this session.
+              </p>
+              {cancelError && (
+                <p className="text-[13px] text-danger">{cancelError}</p>
+              )}
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowCancelConfirm(false)}
+                  disabled={cancelling}
+                >
+                  Keep session
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={handleCancel}
+                  disabled={cancelling}
+                >
+                  {cancelling ? "Cancelling…" : "Yes, cancel"}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,12 +1,16 @@
 from src.db import get_db
 
 
-def get_users(interview_type_id=None, timezone=None, experience=None):
+def get_users(exclude_user_id=None, interview_type_id=None, timezone=None, experience=None):
     db = get_db()
     cur = db.cursor()
 
     conditions = []
     params = []
+
+    if exclude_user_id:
+        conditions.append("u.id != %s")
+        params.append(exclude_user_id)
 
     if interview_type_id:
         conditions.append("uit.interview_type_id = %s")
@@ -106,9 +110,7 @@ def get_me(user_id):
         """,
         (user_id,),
     )
-    profile["topics"] = [
-        {"id": r["id"], "name": r["name"]} for r in cur.fetchall()
-    ]
+    profile["topics"] = [{"id": r["id"], "name": r["name"]} for r in cur.fetchall()]
 
     cur.execute(
         """
@@ -122,7 +124,7 @@ def get_me(user_id):
                 THEN ie.full_name ELSE ir.full_name
             END AS partner_name
         FROM sessions s
-        JOIN interview_types it ON it.id = s.interview_type_id
+        LEFT JOIN interview_types it ON it.id = s.interview_type_id
         JOIN users ir ON ir.id = s.interviewer_id
         JOIN users ie ON ie.id = s.interviewee_id
         WHERE (s.interviewer_id = %s OR s.interviewee_id = %s)
@@ -161,9 +163,7 @@ def update_me(user_id, data):
         )
 
     if "interview_types" in data:
-        cur.execute(
-            "DELETE FROM user_interview_types WHERE user_id = %s", (user_id,)
-        )
+        cur.execute("DELETE FROM user_interview_types WHERE user_id = %s", (user_id,))
         for name in data["interview_types"]:
             cur.execute(
                 """
@@ -175,9 +175,7 @@ def update_me(user_id, data):
             )
 
     if "topic_ids" in data:
-        cur.execute(
-            "DELETE FROM user_topics WHERE user_id = %s", (user_id,)
-        )
+        cur.execute("DELETE FROM user_topics WHERE user_id = %s", (user_id,))
         for topic_id in data["topic_ids"]:
             cur.execute(
                 """

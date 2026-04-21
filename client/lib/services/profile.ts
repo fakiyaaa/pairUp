@@ -35,6 +35,7 @@ export type ProfileData = {
   experience: string;
   bio: string;
   cal_com_link: string;
+  cal_webhook_id: string | null;
   role: UserRole;
   target_role: string;
   interview_types: string[];

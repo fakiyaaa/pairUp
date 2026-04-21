@@ -5,13 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { authApi } from "@/lib/services/auth";
+import { calApi } from "@/lib/services/cal";
 import { profileApi, type InterviewType, type ProfileData, type Role, type Topic } from "@/lib/services/profile";
 import { timezones } from "@/lib/timezones";
-import type { Difficulty, UserRole } from "@/lib/types";
 import { cn, difficultyLabels, formatDate, interviewTypeLabels } from "@/lib/utils";
+import type { Difficulty, UserRole } from "@/lib/types";
 import { ExternalLink, Link2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const roleDisplay: Record<UserRole, string> = {
@@ -21,9 +22,9 @@ const roleDisplay: Record<UserRole, string> = {
 };
 
 
-
 export default function ProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [allInterviewTypes, setAllInterviewTypes] = useState<InterviewType[]>([]);
   const [allTopics, setAllTopics] = useState<Topic[]>([]);
@@ -32,6 +33,8 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [connectingCal, setConnectingCal] = useState(false);
+  const [calError, setCalError] = useState(searchParams.get("cal") === "error" ? "Failed to connect Cal.com — please try again." : "");
 
   // Edit form state
   const [name, setName] = useState("");
@@ -102,6 +105,18 @@ export default function ProfilePage() {
       setEditing(false);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleConnectCal() {
+    setConnectingCal(true);
+    setCalError("");
+    try {
+      const { url } = await calApi.getConnectUrl();
+      window.location.href = url;
+    } catch {
+      setCalError("Failed to start Cal.com connection — please try again.");
+      setConnectingCal(false);
     }
   }
 
@@ -297,9 +312,9 @@ export default function ProfilePage() {
                   {profile.interview_types.map((t) => (
                     <span
                       key={t}
-                      className="px-2 py-0.5 text-[12px] bg-muted rounded-md font-medium capitalize"
+                      className="px-2 py-0.5 text-[12px] bg-muted rounded-md font-medium"
                     >
-                      {t}
+                      {interviewTypeLabels[t] ?? t}
                     </span>
                   ))}
                 </div>
@@ -378,6 +393,7 @@ export default function ProfilePage() {
                     href={session.meeting_link}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="text-[12px] text-muted-foreground hover:text-foreground"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -394,37 +410,50 @@ export default function ProfilePage() {
         <h2 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-4">
           Scheduling
         </h2>
-        {editing ? (
-          <div className="relative">
-            <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="url"
-              placeholder="calendly.com/yourname"
-              value={schedulingUrl}
-              onChange={(e) => setSchedulingUrl(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 text-[14px] bg-card border border-border rounded-xl placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
-            />
+
+        {profile.cal_webhook_id || searchParams.get("cal") === "connected" ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] text-success font-medium">✓ Cal.com connected</span>
+              {profile.cal_com_link && (
+                <a
+                  href={profile.cal_com_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground"
+                >
+                  {profile.cal_com_link.replace(/^https?:\/\//, "")}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+            <Button size="sm" variant="secondary" onClick={handleConnectCal} disabled={connectingCal}>
+              {connectingCal ? "Redirecting…" : "Reconnect Cal.com"}
+            </Button>
+            {calError && <p className="text-[13px] text-danger">{calError}</p>}
           </div>
-        ) : profile.cal_com_link ? (
-          <a
-            href={profile.cal_com_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[14px] text-foreground hover:underline underline-offset-2"
-          >
-            {profile.cal_com_link.replace(/^https?:\/\//, "")}
-            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
-          </a>
         ) : (
-          <p className="text-[14px] text-muted-foreground">
-            No scheduling link yet.{" "}
-            <button
-              onClick={startEditing}
-              className="text-foreground underline underline-offset-2 cursor-pointer"
-            >
-              Add one
-            </button>
-          </p>
+          <div className="space-y-3">
+            <p className="text-[14px] text-muted-foreground">
+              Connect your Cal.com account so PairUp can match your availability with others and auto-create sessions when a booking is made.
+            </p>
+            <Button size="sm" variant="secondary" onClick={handleConnectCal} disabled={connectingCal}>
+              {connectingCal ? "Redirecting…" : "Connect Cal.com"}
+            </Button>
+            {calError && <p className="text-[13px] text-danger">{calError}</p>}
+            {editing && (
+              <div className="relative">
+                <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="url"
+                  placeholder="Or paste any scheduling link (Calendly, etc.)"
+                  value={schedulingUrl}
+                  onChange={(e) => setSchedulingUrl(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 text-[14px] bg-card border border-border rounded-xl placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+                />
+              </div>
+            )}
+          </div>
         )}
       </section>
 

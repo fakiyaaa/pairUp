@@ -7,8 +7,10 @@ profiles_bp = Blueprint("profiles", __name__)
 
 
 @profiles_bp.route("/", methods=["GET"])
+@require_auth
 def list_users():
     users = get_users(
+        exclude_user_id=str(g.user.id),
         interview_type_id=request.args.get("interview_type_id"),
         timezone=request.args.get("timezone"),
         experience=request.args.get("experience"),

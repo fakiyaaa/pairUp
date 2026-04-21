@@ -16,7 +16,13 @@ def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
     expected = hmac.new(
         secret.encode(), payload, hashlib.sha256
     ).hexdigest()
-    return hmac.compare_digest(expected, signature)
+    provided = signature[7:] if signature.startswith("sha256=") else signature
+    return hmac.compare_digest(expected, provided)
+
+
+@webhooks_bp.route("/test", methods=["GET"])
+def test():
+    return {"message": "hello world"}, 200
 
 
 @webhooks_bp.route("/cal", methods=["POST"])

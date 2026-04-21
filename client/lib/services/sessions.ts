@@ -20,24 +20,13 @@ export type ApiSession = {
   interviewee_cal_com_link: string | null;
 };
 
-export type SessionFeedbackPayload = {
-  from_user_id: string;
-  from_user_name: string;
-  to_user_id?: string;
-  communication: number;
-  preparedness: number;
-  technical_skill: number;
-  strengths?: string;
-  improvements?: string;
-  notes?: string;
-};
-
 export type PersistedFeedback = {
   id: string;
   session_id: string;
   from_user_id: string;
   from_user_name: string;
   to_user_id?: string;
+  rating: number;
   communication: number;
   preparedness: number;
   technical_skill: number;
@@ -47,19 +36,32 @@ export type PersistedFeedback = {
   created_at: string;
 };
 
+export type SessionFeedbackPayload = {
+  from_user_id: string;
+  from_user_name: string;
+  to_user_id?: string;
+  rating: number;
+  communication: number;
+  preparedness: number;
+  technical_skill: number;
+  strengths?: string;
+  improvements?: string;
+  notes?: string;
+};
+
 export const sessionsApi = {
   listUpcoming: () => get<ApiSession[]>("/sessions/"),
+
   listCompleted: () => get<ApiSession[]>("/sessions/completed"),
+
   get: (id: string) => get<ApiSession>(`/sessions/${id}`),
 
   getFeedback: (sessionId: string) =>
-    get<{ feedback: PersistedFeedback | null }>(
-      `/sessions/${sessionId}/feedback`,
-    ),
+    get<{ feedback: PersistedFeedback | null }>(`/sessions/${sessionId}/feedback`),
 
   createFeedback: (sessionId: string, payload: SessionFeedbackPayload) =>
-    post<{ feedback: PersistedFeedback }>(
-      `/sessions/${sessionId}/feedback`,
-      payload,
-    ),
+    post<{ feedback: PersistedFeedback }>(`/sessions/${sessionId}/feedback`, payload),
+
+  cancel: (sessionId: string) =>
+    post<{ status: string }>(`/sessions/${sessionId}/cancel`),
 };
