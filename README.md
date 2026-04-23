@@ -3,10 +3,10 @@
 A peer-to-peer mock interview matching platform for Minerva University students. Find practice partners by interview type, experience level, and timezone — then schedule sessions automatically via Cal.com.
 
 ### Video Demo
-[to be added]
+https://drive.google.com/drive/folders/1U56skXT89nQwmDcBLSw8vihnHXn9PQJT?usp=sharing
 
 ### Vercel deployed Webapp
-[to be added]
+https://pair-up-five.vercel.app/
 ## Features
 
 - **Matching** — browse compatible users filtered by interview type (technical, behavioral, case), topics, experience, and timezone overlap
